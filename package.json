@@ -1,0 +1,37 @@
+{
+  "name": "@covai/parser-core",
+  "version": "1.0.0",
+  "description": "Shared AI chat platform parsers and detection for Covai browser extensions.",
+  "type": "module",
+  "main": "ai/index.js",
+  "exports": {
+    ".": "./ai/index.js",
+    "./ai/*": "./ai/*.js",
+    "./detection/*": "./detection/*.js"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "keywords": [
+    "ai",
+    "chat",
+    "parser",
+    "chatgpt",
+    "claude",
+    "gemini",
+    "browser-extension"
+  ],
+  "author": "Rat-S",
+  "license": "MPL-2.0",
+  "dependencies": {
+    "turndown": "^7.2.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "globals": "^17.9.0",
+    "prettier": "^3.9.6"
+  }
+}
