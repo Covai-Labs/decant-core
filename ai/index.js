@@ -7,30 +7,34 @@
  */
 
 // Base class
-export { ChatParser } from './base.js';
+export { ChatParser } from "./base.js";
 
 // Individual parsers
-export { ChatGPTParser } from './chatgpt.js';
-export { ClaudeParser } from './claude.js';
-export { GeminiParser } from './gemini.js';
-export { CopilotParser } from './copilot.js';
-export { DeepSeekParser } from './deepseek.js';
-export { MetaParser } from './meta.js';
-export { MistralParser } from './mistral.js';
-export { PerplexityParser } from './perplexity.js';
-export { QwenParser } from './qwen.js';
-export { LumoParser } from './lumo.js';
-export { ZAiParser } from './z_ai.js';
-export { GoogleAIStudioParser } from './google_ai_studio.js';
-export { NotebookLMParser } from './notebooklm.js';
-export { GoogleSearchAIParser } from './google_search_ai.js';
-export { GeminiCloudAssistParser } from './gemini_cloud_assist.js';
-export { JoylandParser } from './joyland.js';
-export { ChubParser } from './chub.js';
+export { ChatGPTParser } from "./chatgpt.js";
+export { ClaudeParser } from "./claude.js";
+export { GeminiParser } from "./gemini.js";
+export { CopilotParser } from "./copilot.js";
+export { DeepSeekParser } from "./deepseek.js";
+export { MetaParser } from "./meta.js";
+export { MistralParser } from "./mistral.js";
+export { PerplexityParser } from "./perplexity.js";
+export { QwenParser } from "./qwen.js";
+export { LumoParser } from "./lumo.js";
+export { ZAiParser } from "./z_ai.js";
+export { GoogleAIStudioParser } from "./google_ai_studio.js";
+export { NotebookLMParser } from "./notebooklm.js";
+export { GoogleSearchAIParser } from "./google_search_ai.js";
+export { GeminiCloudAssistParser } from "./gemini_cloud_assist.js";
+export { JoylandParser } from "./joyland.js";
+export { ChubParser } from "./chub.js";
 
 // Utilities
-export { convertToMarkdown, cleanMarkdown } from '../utils/html-to-markdown.js';
+export { convertToMarkdown, cleanMarkdown } from "../utils/html-to-markdown.js";
 
 // Detection
-export { detectPlatform, isAiChatUrl, parsers } from '../detection/detect-platform.js';
-export { AI_CHAT_DOMAINS } from '../detection/domains.js';
+export {
+  detectPlatform,
+  isAiChatUrl,
+  parsers,
+} from "../detection/detect-platform.js";
+export { AI_CHAT_DOMAINS } from "../detection/domains.js";

@@ -1,52 +1,53 @@
-import { ChatParser } from './base.js';
-import { convertToMarkdown } from '../utils/html-to-markdown.js';
+import { ChatParser } from "./base.js";
+import { convertToMarkdown } from "../utils/html-to-markdown.js";
 
 export class PerplexityParser extends ChatParser {
-  name = 'Perplexity';
+  name = "Perplexity";
   isAvailable(url) {
-    return url.includes('perplexity.ai');
+    return url.includes("perplexity.ai");
   }
 
   async parse() {
     const rawTitle =
-      document.querySelector('.share-title-section h1')?.textContent ||
-      document.querySelector('h1')?.textContent ||
+      document.querySelector(".share-title-section h1")?.textContent ||
+      document.querySelector("h1")?.textContent ||
       document.title ||
-      'Perplexity Search';
-    const title = rawTitle.trim().replace(/\s+/g, ' ');
+      "Perplexity Search";
+    const title = rawTitle.trim().replace(/\s+/g, " ");
 
     const messages = [];
 
     // Perplexity Container
-    const threadContainer = document.querySelector('.max-w-threadContentWidth') || document.body;
+    const threadContainer =
+      document.querySelector(".max-w-threadContentWidth") || document.body;
 
     // Candidates for User Messages
     const userSelectors = [
-      'h1.group\\/query',
-      '.group\\/query',
-      '.whitespace-pre-line.text-pretty',
+      "h1.group\\/query",
+      ".group\\/query",
+      ".whitespace-pre-line.text-pretty",
       '[data-testid="search-bar-input"]', // fallback for input? typically input is not the message display
     ];
 
     // Candidates for Assistant Messages
-    const assistantSelectors = ['div[id^="markdown-content-"]', '.prose'];
+    const assistantSelectors = ['div[id^="markdown-content-"]', ".prose"];
 
     // Strategy: Iterate children of thread container or find all matches in document
     // Thread container is better to preserve order
 
     // Let's select all potential message blocks within the thread container
-    const selectorString = [...userSelectors, ...assistantSelectors].join(', ');
+    const selectorString = [...userSelectors, ...assistantSelectors].join(", ");
     const elements = threadContainer.querySelectorAll(selectorString);
 
     // Helper to determine role
     const getRole = (el) => {
       for (const s of userSelectors) {
-        if (el.matches(s)) return 'User';
+        if (el.matches(s)) return "User";
       }
       for (const s of assistantSelectors) {
-        if (el.matches(s)) return 'Perplexity';
+        if (el.matches(s)) return "Perplexity";
       }
-      return 'Unknown';
+      return "Unknown";
     };
 
     const seenText = new Set();
@@ -73,9 +74,11 @@ export class PerplexityParser extends ChatParser {
     });
 
     const currentUrl =
-      typeof window !== 'undefined' && window.location ? window.location.href || '' : '';
+      typeof window !== "undefined" && window.location
+        ? window.location.href || ""
+        : "";
     const metadata = {
-      Source: 'Perplexity',
+      Source: "Perplexity",
       Date: new Date().toLocaleString(),
       Link: currentUrl,
     };

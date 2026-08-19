@@ -4,24 +4,24 @@
  */
 
 export const AI_CHAT_DOMAINS = [
-  'chatgpt.com',
-  'claude.ai',
-  'gemini.google.com',
-  'chat.deepseek.com',
-  'perplexity.ai',
-  'chat.qwen.ai',
-  'qwen.ai',
-  'chat.mistral.ai',
-  'copilot.microsoft.com',
-  'lumo.proton.me',
-  'meta.ai',
-  'aistudio.google.com',
-  'notebooklm.google.com',
-  'notebook.google.com',
-  'chat.z.ai',
-  'joyland.ai',
-  'chub.ai',
-  'characterhub.org',
+  "chatgpt.com",
+  "claude.ai",
+  "gemini.google.com",
+  "chat.deepseek.com",
+  "perplexity.ai",
+  "chat.qwen.ai",
+  "qwen.ai",
+  "chat.mistral.ai",
+  "copilot.microsoft.com",
+  "lumo.proton.me",
+  "meta.ai",
+  "aistudio.google.com",
+  "notebooklm.google.com",
+  "notebook.google.com",
+  "chat.z.ai",
+  "joyland.ai",
+  "chub.ai",
+  "characterhub.org",
 ];
 
 /**
@@ -30,19 +30,24 @@ export const AI_CHAT_DOMAINS = [
  */
 export const URL_PATTERNS = [
   {
-    test: (url) => url.includes('copilot.microsoft.com') || url.includes('copilot.com') ||
-      url.includes('copilot.cloud.microsoft') || url.includes('m365.cloud.microsoft') ||
-      url.includes('m365.microsoft.com') || url.includes('bing.com/chat') ||
-      url.includes('bing.com/copilot') || url.includes('bing.com/copilotsearch') ||
-      url.includes('edgeservices.bing.com'),
-    platform: 'copilot',
+    test: (url) =>
+      url.includes("copilot.microsoft.com") ||
+      url.includes("copilot.com") ||
+      url.includes("copilot.cloud.microsoft") ||
+      url.includes("m365.cloud.microsoft") ||
+      url.includes("m365.microsoft.com") ||
+      url.includes("bing.com/chat") ||
+      url.includes("bing.com/copilot") ||
+      url.includes("bing.com/copilotsearch") ||
+      url.includes("edgeservices.bing.com"),
+    platform: "copilot",
   },
   {
     test: (url) => /google\.[a-z.]+\/search/.test(url),
-    platform: 'google-search-ai',
+    platform: "google-search-ai",
   },
   {
-    test: (url) => url.includes('console.cloud.google.com/gemini'),
-    platform: 'gemini-cloud-assist',
+    test: (url) => url.includes("console.cloud.google.com/gemini"),
+    platform: "gemini-cloud-assist",
   },
 ];

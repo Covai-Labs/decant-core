@@ -1,69 +1,73 @@
-import { ChatParser } from './base.js';
-import { convertToMarkdown } from '../utils/html-to-markdown.js';
+import { ChatParser } from "./base.js";
+import { convertToMarkdown } from "../utils/html-to-markdown.js";
 
 export class ZAiParser extends ChatParser {
-  name = 'Z.ai';
+  name = "Z.ai";
   isAvailable(url) {
-    return url.includes('chat.z.ai');
+    return url.includes("chat.z.ai");
   }
 
   async parse() {
-    let title = '';
-    const titleEl = document.querySelector('title');
+    let title = "";
+    const titleEl = document.querySelector("title");
     if (titleEl) {
-      title = titleEl.textContent.trim().replace(/\s+/g, ' ');
+      title = titleEl.textContent.trim().replace(/\s+/g, " ");
     }
     if (!title && document.title) {
-      title = document.title.trim().replace(/\s+/g, ' ');
+      title = document.title.trim().replace(/\s+/g, " ");
     }
-    title = title || 'Z.ai Chat';
+    title = title || "Z.ai Chat";
     const messages = [];
 
     // Selectors for z.ai messages
-    const userSelector = '.chat-user';
-    const assistantSelector = '.chat-assistant';
+    const userSelector = ".chat-user";
+    const assistantSelector = ".chat-assistant";
 
     // We'll traverse the DOM to find these in order
-    const allElements = document.querySelectorAll(`${userSelector}, ${assistantSelector}`);
+    const allElements = document.querySelectorAll(
+      `${userSelector}, ${assistantSelector}`,
+    );
 
     allElements.forEach((el) => {
-      let role = 'Unknown';
+      let role = "Unknown";
       let contentEl = null;
 
       if (el.matches(userSelector)) {
-        role = 'User';
+        role = "User";
         // Select user message text block (excluding edit/copy buttons)
-        contentEl = el.querySelector('div.relative.overflow-hidden') || el;
+        contentEl = el.querySelector("div.relative.overflow-hidden") || el;
       } else if (el.matches(assistantSelector)) {
-        role = 'Z.ai';
+        role = "Z.ai";
         // Select assistant message content wrapper (excluding copy/regenerate buttons)
         const rawContentEl =
-          el.querySelector('#response-content-container') ||
-          el.querySelector('.markdown-prose') ||
+          el.querySelector("#response-content-container") ||
+          el.querySelector(".markdown-prose") ||
           el;
         const contentElClone = rawContentEl.cloneNode(true);
 
         // Preprocess CodeMirror 6 code blocks into standard HTML <pre><code> structures
-        contentElClone.querySelectorAll('.cm-editor').forEach((cmEditor) => {
+        contentElClone.querySelectorAll(".cm-editor").forEach((cmEditor) => {
           // Detect language from class names of the parent language container
           const languageWrapper = cmEditor.closest('[class*="language-"]');
-          let language = '';
+          let language = "";
           if (languageWrapper) {
             const classList = Array.from(languageWrapper.classList);
-            const langClass = classList.find((cls) => cls.startsWith('language-'));
+            const langClass = classList.find((cls) =>
+              cls.startsWith("language-"),
+            );
             if (langClass) {
-              language = langClass.replace('language-', '');
+              language = langClass.replace("language-", "");
             }
           }
 
           // Extract the lines from CodeMirror editor view
-          const lines = Array.from(cmEditor.querySelectorAll('.cm-line'));
-          const codeText = lines.map((line) => line.textContent).join('\n');
+          const lines = Array.from(cmEditor.querySelectorAll(".cm-line"));
+          const codeText = lines.map((line) => line.textContent).join("\n");
 
           // Create new pre and code tags using the clone's owner document context
           const ownerDoc = cmEditor.ownerDocument || document;
-          const pre = ownerDoc.createElement('pre');
-          const code = ownerDoc.createElement('code');
+          const pre = ownerDoc.createElement("pre");
+          const code = ownerDoc.createElement("code");
           if (language) {
             code.className = `language-${language}`;
           }
@@ -89,9 +93,11 @@ export class ZAiParser extends ChatParser {
     });
 
     const currentUrl =
-      typeof window !== 'undefined' && window.location ? window.location.href || '' : '';
+      typeof window !== "undefined" && window.location
+        ? window.location.href || ""
+        : "";
     const metadata = {
-      Source: 'Z.ai',
+      Source: "Z.ai",
       Date: new Date().toLocaleString(),
       Link: currentUrl,
     };

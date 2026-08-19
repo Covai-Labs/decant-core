@@ -1,10 +1,10 @@
-import { ChatParser } from './base.js';
-import { convertToMarkdown } from '../utils/html-to-markdown.js';
+import { ChatParser } from "./base.js";
+import { convertToMarkdown } from "../utils/html-to-markdown.js";
 
 function getUserToken() {
   try {
-    if (typeof localStorage === 'undefined') return null;
-    const raw = localStorage.getItem('userToken');
+    if (typeof localStorage === "undefined") return null;
+    const raw = localStorage.getItem("userToken");
     if (!raw) return null;
     try {
       const parsed = JSON.parse(raw);
@@ -19,8 +19,8 @@ function getUserToken() {
 
 function getConversationId() {
   try {
-    if (typeof window === 'undefined' || !window.location) return null;
-    const path = window.location.pathname || window.location.href || '';
+    if (typeof window === "undefined" || !window.location) return null;
+    const path = window.location.pathname || window.location.href || "";
     return (
       path.match(/\/chat\/s\/([a-f0-9-]+)/)?.[1] ??
       path.match(/\/a\/chat\/s\/([a-f0-9-]+)/)?.[1] ??
@@ -34,10 +34,10 @@ function getConversationId() {
 async function fetchDeepSeekConversation(sessionId, token) {
   const url = `https://chat.deepseek.com/api/v0/chat/history_messages?chat_session_id=${sessionId}&cache_version=0`;
   const response = await fetch(url, {
-    method: 'GET',
-    credentials: 'include',
+    method: "GET",
+    credentials: "include",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
   });
@@ -74,27 +74,29 @@ async function fetchDeepSeekConversation(sessionId, token) {
 
   return branch
     .map((msgNode) => {
-      const isUser = msgNode.role === 'USER' || msgNode.role === 'user';
-      const role = isUser ? 'User' : 'DeepSeek';
-      const content = msgNode.content || msgNode.text || '';
+      const isUser = msgNode.role === "USER" || msgNode.role === "user";
+      const role = isUser ? "User" : "DeepSeek";
+      const content = msgNode.content || msgNode.text || "";
       return { role, content: content.trim() };
     })
     .filter((msg) => msg.content.length > 0);
 }
 
 export class DeepSeekParser extends ChatParser {
-  name = 'DeepSeek';
+  name = "DeepSeek";
   isAvailable(url) {
-    return url.includes('chat.deepseek.com');
+    return url.includes("chat.deepseek.com");
   }
 
   async parse() {
-    const title = document.title || 'DeepSeek Chat';
+    const title = document.title || "DeepSeek Chat";
 
     const currentUrl =
-      typeof window !== 'undefined' && window.location ? window.location.href || '' : '';
+      typeof window !== "undefined" && window.location
+        ? window.location.href || ""
+        : "";
     const metadata = {
-      Source: 'DeepSeek',
+      Source: "DeepSeek",
       Date: new Date().toLocaleString(),
       Link: currentUrl,
     };
@@ -110,25 +112,30 @@ export class DeepSeekParser extends ChatParser {
         }
       }
     } catch (e) {
-      console.warn('[AI Exporter] DeepSeek API fetch failed, falling back to DOM:', e);
+      console.warn(
+        "[AI Exporter] DeepSeek API fetch failed, falling back to DOM:",
+        e,
+      );
     }
 
     // Secondary: DOM Fallback
     const messages = [];
 
     // Selectors from research
-    const userSelector = '.fbb737a4';
-    const assistantSelector = '.ds-markdown';
+    const userSelector = ".fbb737a4";
+    const assistantSelector = ".ds-markdown";
 
     // We'll traverse the DOM to find these in order
-    const allElements = document.querySelectorAll(`${userSelector}, ${assistantSelector}`);
+    const allElements = document.querySelectorAll(
+      `${userSelector}, ${assistantSelector}`,
+    );
 
     allElements.forEach((el) => {
-      let role = 'Unknown';
+      let role = "Unknown";
       if (el.matches(userSelector)) {
-        role = 'User';
+        role = "User";
       } else if (el.matches(assistantSelector)) {
-        role = 'DeepSeek';
+        role = "DeepSeek";
       }
 
       const text = convertToMarkdown(el);
@@ -139,10 +146,12 @@ export class DeepSeekParser extends ChatParser {
 
     // Fallback if the specific classes fail (e.g. class name rotation)
     if (messages.length === 0) {
-      const messageRows = document.querySelectorAll('.ds-message-row, .message-row');
+      const messageRows = document.querySelectorAll(
+        ".ds-message-row, .message-row",
+      );
       messageRows.forEach((row) => {
-        const isUser = row.classList.contains('ds-user-message');
-        const role = isUser ? 'User' : 'DeepSeek';
+        const isUser = row.classList.contains("ds-user-message");
+        const role = isUser ? "User" : "DeepSeek";
         const text = convertToMarkdown(row);
         if (text.trim()) {
           messages.push({ role, content: text.trim() });

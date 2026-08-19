@@ -1,14 +1,16 @@
-import { ChatParser } from './base.js';
-import { convertToMarkdown } from '../utils/html-to-markdown.js';
+import { ChatParser } from "./base.js";
+import { convertToMarkdown } from "../utils/html-to-markdown.js";
 import {
   collectMountedTurnMessages,
   findChatGPTScrollRoot,
   getConversationTurns,
-} from './chatgpt_scroll_collector.js';
+} from "./chatgpt_scroll_collector.js";
 
 function getAccessToken() {
   try {
-    const el = typeof document !== 'undefined' && document.getElementById('client-bootstrap');
+    const el =
+      typeof document !== "undefined" &&
+      document.getElementById("client-bootstrap");
     if (!el) return null;
     return JSON.parse(el.textContent).session.accessToken;
   } catch {
@@ -18,8 +20,8 @@ function getAccessToken() {
 
 function getConversationId() {
   try {
-    if (typeof window === 'undefined' || !window.location) return null;
-    const path = window.location.pathname || window.location.href || '';
+    if (typeof window === "undefined" || !window.location) return null;
+    const path = window.location.pathname || window.location.href || "";
     const match = path.match(/\/(?:c|share|g\/[^/]+\/c)\/([^/?#]+)/);
     return match ? match[1] : null;
   } catch {
@@ -30,14 +32,14 @@ function getConversationId() {
 function fetchConversation(convId, token, includeImages) {
   return new Promise((resolve, reject) => {
     const requestId =
-      typeof crypto !== 'undefined' && crypto.randomUUID
+      typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID()
         : Math.random().toString(36).substring(2) + Date.now().toString(36);
 
     const handler = (event) => {
-      if (event.data?.source !== 'chatgpt-exporter-page') return;
+      if (event.data?.source !== "chatgpt-exporter-page") return;
       if (event.data?.requestId !== requestId) return;
-      window.removeEventListener('message', handler);
+      window.removeEventListener("message", handler);
       clearTimeout(timer);
       if (event.data.error) {
         reject(new Error(event.data.error));
@@ -47,21 +49,21 @@ function fetchConversation(convId, token, includeImages) {
     };
 
     const timer = setTimeout(() => {
-      window.removeEventListener('message', handler);
-      reject(new Error('Request timed out'));
+      window.removeEventListener("message", handler);
+      reject(new Error("Request timed out"));
     }, 45000);
 
-    window.addEventListener('message', handler);
+    window.addEventListener("message", handler);
     window.postMessage(
       {
-        source: 'chatgpt-exporter-ext',
-        type: 'fetch_conversation',
+        source: "chatgpt-exporter-ext",
+        type: "fetch_conversation",
         convId,
         token,
         requestId,
         includeImages,
       },
-      'https://chatgpt.com',
+      "https://chatgpt.com",
     );
   });
 }
@@ -84,16 +86,18 @@ function findLeafFromNode(mapping, startNodeId) {
 
 function resolveActiveLeafNode(mapping, currentNodeId) {
   // 1. Try DOM elements first (captures branch if user switched turns in UI)
-  if (typeof document !== 'undefined' && document.querySelectorAll) {
+  if (typeof document !== "undefined" && document.querySelectorAll) {
     const msgEls = Array.from(
       document.querySelectorAll(
-        'div[data-message-id], [data-message-author-role][data-message-id], section[data-turn-id], article[data-turn-id]',
+        "div[data-message-id], [data-message-author-role][data-message-id], section[data-turn-id], article[data-turn-id]",
       ),
     );
     for (let i = msgEls.length - 1; i >= 0; i--) {
       const el = msgEls[i];
       const id =
-        el.dataset?.messageId || el.dataset?.turnId || el.getAttribute?.('data-message-id');
+        el.dataset?.messageId ||
+        el.dataset?.turnId ||
+        el.getAttribute?.("data-message-id");
       if (id && mapping[id]) {
         const leaf = findLeafFromNode(mapping, id);
         if (leaf) return leaf;
@@ -110,21 +114,25 @@ function resolveActiveLeafNode(mapping, currentNodeId) {
 }
 
 export function extractSharedConversationFromDom(
-  doc = typeof document !== 'undefined' ? document : null,
+  doc = typeof document !== "undefined" ? document : null,
 ) {
-  if (!doc || typeof doc.querySelectorAll !== 'function') return null;
+  if (!doc || typeof doc.querySelectorAll !== "function") return null;
 
   function findMappingInObj(obj, seen = new Set()) {
-    if (!obj || typeof obj !== 'object' || seen.has(obj)) return null;
+    if (!obj || typeof obj !== "object" || seen.has(obj)) return null;
     seen.add(obj);
 
-    if (obj.mapping && typeof obj.mapping === 'object' && Object.keys(obj.mapping).length > 0) {
+    if (
+      obj.mapping &&
+      typeof obj.mapping === "object" &&
+      Object.keys(obj.mapping).length > 0
+    ) {
       return obj;
     }
     if (
       obj.data &&
       obj.data.mapping &&
-      typeof obj.data.mapping === 'object' &&
+      typeof obj.data.mapping === "object" &&
       Object.keys(obj.data.mapping).length > 0
     ) {
       return obj.data;
@@ -144,10 +152,14 @@ export function extractSharedConversationFromDom(
     return null;
   }
 
-  const scripts = Array.from(doc.querySelectorAll('script'));
+  const scripts = Array.from(doc.querySelectorAll("script"));
   for (const script of scripts) {
-    const text = script.textContent || '';
-    if (!text || (!text.includes('"mapping"') && !text.includes('current_node'))) continue;
+    const text = script.textContent || "";
+    if (
+      !text ||
+      (!text.includes('"mapping"') && !text.includes("current_node"))
+    )
+      continue;
 
     try {
       const parsed = JSON.parse(text);
@@ -169,7 +181,7 @@ export function extractSharedConversationFromDom(
     }
   }
 
-  const bootstrapEl = doc.getElementById?.('client-bootstrap');
+  const bootstrapEl = doc.getElementById?.("client-bootstrap");
   if (bootstrapEl) {
     try {
       const parsed = JSON.parse(bootstrapEl.textContent);
@@ -197,7 +209,9 @@ export function linearize(mapping, includeImages, currentNodeId) {
     }
     path.reverse();
   } else {
-    const root = Object.values(mapping).find((n) => !n.parent || !mapping[n.parent]);
+    const root = Object.values(mapping).find(
+      (n) => !n.parent || !mapping[n.parent],
+    );
     if (!root) return [];
 
     const subtreeSize = {};
@@ -206,7 +220,8 @@ export function linearize(mapping, includeImages, currentNodeId) {
       const node = mapping[id];
       if (!node) return (subtreeSize[id] = 0);
       const childSizes = (node.children ?? []).map((cid) => size(cid));
-      return (subtreeSize[id] = 1 + (childSizes.length ? Math.max(...childSizes) : 0));
+      return (subtreeSize[id] =
+        1 + (childSizes.length ? Math.max(...childSizes) : 0));
     }
     for (const id of Object.keys(mapping)) size(id);
 
@@ -215,10 +230,14 @@ export function linearize(mapping, includeImages, currentNodeId) {
     while (node && !visited.has(node.id)) {
       visited.add(node.id);
       path.push(node);
-      const validChildren = (node.children ?? []).filter((cid) => cid in mapping);
+      const validChildren = (node.children ?? []).filter(
+        (cid) => cid in mapping,
+      );
       node = validChildren.length
         ? mapping[
-            validChildren.reduce((best, cid) => (subtreeSize[cid] > subtreeSize[best] ? cid : best))
+            validChildren.reduce((best, cid) =>
+              subtreeSize[cid] > subtreeSize[best] ? cid : best,
+            )
           ]
         : null;
     }
@@ -234,76 +253,105 @@ export function linearize(mapping, includeImages, currentNodeId) {
     const role = msg?.author?.role;
     const authorName = msg?.author?.name;
     const isThoughtMsg =
-      authorName === 'thought' ||
-      msg?.recipient === 'thought' ||
-      msg?.content?.content_type === 'thought' ||
-      msg?.content?.content_type === 'thoughts' ||
-      msg?.metadata?.reasoning_status === 'is_reasoning';
+      authorName === "thought" ||
+      msg?.recipient === "thought" ||
+      msg?.content?.content_type === "thought" ||
+      msg?.content?.content_type === "thoughts" ||
+      msg?.metadata?.reasoning_status === "is_reasoning";
 
-    if (role === 'user' || role === 'assistant' || role === 'tool' || isThoughtMsg) {
+    if (
+      role === "user" ||
+      role === "assistant" ||
+      role === "tool" ||
+      isThoughtMsg
+    ) {
       const segments = [];
       const parts = msg?.content?.parts ?? [];
 
       for (const part of parts) {
-        let partText = '';
+        let partText = "";
         let isThoughtPart = isThoughtMsg;
 
-        if (typeof part === 'string') {
+        if (typeof part === "string") {
           partText = part;
-        } else if (part && typeof part === 'object') {
-          if (part.content_type === 'text' && typeof part.text === 'string') {
+        } else if (part && typeof part === "object") {
+          if (part.content_type === "text" && typeof part.text === "string") {
             partText = part.text;
-          } else if (part.content_type === 'thought' && typeof part.text === 'string') {
+          } else if (
+            part.content_type === "thought" &&
+            typeof part.text === "string"
+          ) {
             partText = part.text;
             isThoughtPart = true;
-          } else if (part.content_type === 'audio_transcription' && typeof part.text === 'string') {
+          } else if (
+            part.content_type === "audio_transcription" &&
+            typeof part.text === "string"
+          ) {
             partText = part.text;
           }
         }
 
-        if (partText && role !== 'tool') {
+        if (partText && role !== "tool") {
           const text = partText
-            .replace(/\u{E0000}[\u{E0000}-\u{E007F}]*/gu, '')
-            .replace(/citeturn\d+\w*/g, '')
+            .replace(/\u{E0000}[\u{E0000}-\u{E007F}]*/gu, "")
+            .replace(/citeturn\d+\w*/g, "")
             .trim();
           if (text) {
             if (isThoughtPart) {
-              segments.push({ type: 'thought', content: text });
+              segments.push({ type: "thought", content: text });
             } else {
-              segments.push({ type: 'text', content: text });
+              segments.push({ type: "text", content: text });
             }
           }
         } else if (
           includeImages &&
-          part?.content_type === 'image_asset_pointer' &&
+          part?.content_type === "image_asset_pointer" &&
           part?.asset_pointer
         ) {
-          segments.push({ type: 'image', fileId: part.asset_pointer.split('://')[1] });
+          segments.push({
+            type: "image",
+            fileId: part.asset_pointer.split("://")[1],
+          });
         }
       }
 
       // Handle standalone content.text (e.g. execution_output or plain text)
-      if (typeof msg.content?.text === 'string' && msg.content.text.trim() && parts.length === 0) {
-        segments.push({ type: 'text', content: msg.content.text.trim() });
+      if (
+        typeof msg.content?.text === "string" &&
+        msg.content.text.trim() &&
+        parts.length === 0
+      ) {
+        segments.push({ type: "text", content: msg.content.text.trim() });
       }
 
       // Handle o1/o3/o4 reasoning thoughts array: content.thoughts = [{ summary, content }]
-      if (Array.isArray(msg.content?.thoughts) && msg.content.thoughts.length > 0) {
+      if (
+        Array.isArray(msg.content?.thoughts) &&
+        msg.content.thoughts.length > 0
+      ) {
         const thoughtParts = msg.content.thoughts
-          .map((t) => (t.summary ? `**${t.summary}**\n${t.content || ''}` : t.content || ''))
+          .map((t) =>
+            t.summary
+              ? `**${t.summary}**\n${t.content || ""}`
+              : t.content || "",
+          )
           .filter(Boolean);
         if (thoughtParts.length > 0) {
-          segments.push({ type: 'thought', content: thoughtParts.join('\n\n') });
+          segments.push({
+            type: "thought",
+            content: thoughtParts.join("\n\n"),
+          });
         }
       }
 
       // Handle reasoning recap
       if (
-        (msg.content?.content_type === 'reasoning_recap' || msg.content?.content) &&
-        typeof msg.content.content === 'string' &&
+        (msg.content?.content_type === "reasoning_recap" ||
+          msg.content?.content) &&
+        typeof msg.content.content === "string" &&
         msg.content.content.trim()
       ) {
-        segments.push({ type: 'thought', content: msg.content.content.trim() });
+        segments.push({ type: "thought", content: msg.content.content.trim() });
       }
 
       // Handle Deep Research reports (widget_state)
@@ -312,14 +360,16 @@ export function linearize(mapping, includeImages, currentNodeId) {
         msg.metadata?.tool_response_metadata?.venus_widget_state;
       if (widgetRaw) {
         try {
-          const widget = typeof widgetRaw === 'string' ? JSON.parse(widgetRaw) : widgetRaw;
-          const reportText = widget.report_message?.content?.parts?.[0] || widget.markdown;
+          const widget =
+            typeof widgetRaw === "string" ? JSON.parse(widgetRaw) : widgetRaw;
+          const reportText =
+            widget.report_message?.content?.parts?.[0] || widget.markdown;
           const steering = widget.steering_acknowledgement;
-          let researchContent = '';
+          let researchContent = "";
           if (steering) researchContent += `${steering}\n\n`;
           if (reportText) researchContent += reportText;
           if (researchContent.trim()) {
-            segments.push({ type: 'text', content: researchContent.trim() });
+            segments.push({ type: "text", content: researchContent.trim() });
           }
         } catch {
           // Ignore widget state JSON parse errors
@@ -327,20 +377,33 @@ export function linearize(mapping, includeImages, currentNodeId) {
       }
 
       // Handle attachments
-      if (Array.isArray(msg.metadata?.attachments) && msg.metadata.attachments.length > 0) {
-        const fileNames = msg.metadata.attachments.map((att) => att.name).filter(Boolean);
+      if (
+        Array.isArray(msg.metadata?.attachments) &&
+        msg.metadata.attachments.length > 0
+      ) {
+        const fileNames = msg.metadata.attachments
+          .map((att) => att.name)
+          .filter(Boolean);
         if (fileNames.length > 0) {
-          segments.push({ type: 'text', content: `[Attached: ${fileNames.join(', ')}]` });
+          segments.push({
+            type: "text",
+            content: `[Attached: ${fileNames.join(", ")}]`,
+          });
         }
       }
 
       // Handle Canvas documents
       if (msg.metadata?.canvas?.title) {
-        segments.push({ type: 'text', content: `[Canvas: ${msg.metadata.canvas.title}]` });
+        segments.push({
+          type: "text",
+          content: `[Canvas: ${msg.metadata.canvas.title}]`,
+        });
       }
 
-      const displayRole = role === 'user' ? 'User' : 'ChatGPT';
-      const timestamp = msg?.create_time ? new Date(msg.create_time * 1000).toLocaleString() : null;
+      const displayRole = role === "user" ? "User" : "ChatGPT";
+      const timestamp = msg?.create_time
+        ? new Date(msg.create_time * 1000).toLocaleString()
+        : null;
 
       if (segments.length) {
         const citeMap = {};
@@ -348,7 +411,10 @@ export function linearize(mapping, includeImages, currentNodeId) {
         for (const ref of msg?.metadata?.content_references ?? []) {
           if (ref.matched_text) {
             if (ref.items?.length) citeMap[ref.matched_text] = ref.items;
-            if (ref.type === 'image_group' || ref.matched_text.includes('image_group')) {
+            if (
+              ref.type === "image_group" ||
+              ref.matched_text.includes("image_group")
+            ) {
               imageGroupMap[ref.matched_text] = ref;
             }
           }
@@ -356,9 +422,9 @@ export function linearize(mapping, includeImages, currentNodeId) {
 
         // If previous message is also ChatGPT, merge segments (thoughts in front, content in back)
         if (
-          displayRole === 'ChatGPT' &&
+          displayRole === "ChatGPT" &&
           messages.length > 0 &&
-          messages[messages.length - 1].role === 'ChatGPT'
+          messages[messages.length - 1].role === "ChatGPT"
         ) {
           const prevMsg = messages[messages.length - 1];
           if (isThoughtMsg) {
@@ -372,7 +438,13 @@ export function linearize(mapping, includeImages, currentNodeId) {
             prevMsg.timestamp = timestamp;
           }
         } else {
-          messages.push({ role: displayRole, segments, citeMap, imageGroupMap, timestamp });
+          messages.push({
+            role: displayRole,
+            segments,
+            citeMap,
+            imageGroupMap,
+            timestamp,
+          });
         }
       }
     }
@@ -382,12 +454,12 @@ export function linearize(mapping, includeImages, currentNodeId) {
 }
 
 function cleanMarkdownFromApi(text, citeMap, imageGroupMap) {
-  if (!text) return '';
+  if (!text) return "";
 
   // 1. Remove specific character ranges (like some PUA ranges)
   text = text
-    .replace(/\u{E0000}[\u{E0000}-\u{E007F}]*/gu, '')
-    .replace(/citeturn\d+\w*/g, '')
+    .replace(/\u{E0000}[\u{E0000}-\u{E007F}]*/gu, "")
+    .replace(/citeturn\d+\w*/g, "")
     .trim();
 
   // 2. Replace ChatGPT PUA URL annotations: url{label}{href}
@@ -415,87 +487,101 @@ function cleanMarkdownFromApi(text, citeMap, imageGroupMap) {
         const markdownImgs = ref.images
           .map((imgObj) => {
             const res = imgObj.image_result || {};
-            const title = res.title || imgObj.image_search_query || 'Image';
-            const src = res.content_url || res.thumbnail_url || res.original_content_url;
+            const title = res.title || imgObj.image_search_query || "Image";
+            const src =
+              res.content_url || res.thumbnail_url || res.original_content_url;
             if (src) {
               return `![${title}](${src})`;
             }
-            return '';
+            return "";
           })
           .filter(Boolean);
         if (markdownImgs.length > 0) {
-          return '\n\n' + markdownImgs.join('\n\n') + '\n\n';
+          return "\n\n" + markdownImgs.join("\n\n") + "\n\n";
         }
       }
-      if (ref.safe_urls && Array.isArray(ref.safe_urls) && ref.safe_urls.length > 0) {
+      if (
+        ref.safe_urls &&
+        Array.isArray(ref.safe_urls) &&
+        ref.safe_urls.length > 0
+      ) {
         return (
-          '\n\n' + ref.safe_urls.map((url, i) => `![Image ${i + 1}](${url})`).join('\n\n') + '\n\n'
+          "\n\n" +
+          ref.safe_urls
+            .map((url, i) => `![Image ${i + 1}](${url})`)
+            .join("\n\n") +
+          "\n\n"
         );
       }
       if (ref.alt) {
-        return '\n\n' + ref.alt + '\n\n';
+        return "\n\n" + ref.alt + "\n\n";
       }
     }
-    return '';
+    return "";
   });
 
   // 4. Replace ChatGPT PUA cite annotations
-  text = text.replace(/\uE200cite(?:\uE202[^\uE202\uE201]+)+\uE201/g, (match) => {
-    const items = citeMap?.[match] ?? [];
-    if (!items.length) return '';
-    const formatted = items.map((item) => {
-      const label = item.attribution || item.title || 'Source';
-      return `[${label}](${item.url})`;
-    });
-    return ` (${formatted.join(', ')})`;
-  });
+  text = text.replace(
+    /\uE200cite(?:\uE202[^\uE202\uE201]+)+\uE201/g,
+    (match) => {
+      const items = citeMap?.[match] ?? [];
+      if (!items.length) return "";
+      const formatted = items.map((item) => {
+        const label = item.attribution || item.title || "Source";
+        return `[${label}](${item.url})`;
+      });
+      return ` (${formatted.join(", ")})`;
+    },
+  );
 
   return text;
 }
 
 export class ChatGPTParser extends ChatParser {
-  name = 'ChatGPT';
+  name = "ChatGPT";
   constructor() {
     super();
     this.lastFetch = null;
   }
 
   isAvailable(url) {
-    return url.includes('chatgpt.com');
+    return url.includes("chatgpt.com");
   }
 
   getRoleElement(container) {
-    if (container.matches?.('[data-message-author-role]')) return container;
-    return container.querySelector?.('[data-message-author-role]') || null;
+    if (container.matches?.("[data-message-author-role]")) return container;
+    return container.querySelector?.("[data-message-author-role]") || null;
   }
 
   getRoleElements(container) {
-    if (container.matches?.('[data-message-author-role]')) return [container];
-    return Array.from(container.querySelectorAll?.('[data-message-author-role]') || []);
+    if (container.matches?.("[data-message-author-role]")) return [container];
+    return Array.from(
+      container.querySelectorAll?.("[data-message-author-role]") || [],
+    );
   }
 
   getMessageRole(container, roleElement) {
-    const roleAttr = roleElement?.getAttribute('data-message-author-role');
-    if (roleAttr) return roleAttr === 'user' ? 'User' : 'ChatGPT';
+    const roleAttr = roleElement?.getAttribute("data-message-author-role");
+    if (roleAttr) return roleAttr === "user" ? "User" : "ChatGPT";
 
-    const text = container.innerText || '';
-    if (text.startsWith('You\n') || text.includes('\nYou\n')) return 'User';
+    const text = container.innerText || "";
+    if (text.startsWith("You\n") || text.includes("\nYou\n")) return "User";
 
-    return 'ChatGPT';
+    return "ChatGPT";
   }
 
   getContentElement(container, roleElement) {
-    if (roleElement?.getAttribute('data-message-author-role') === 'user') {
+    if (roleElement?.getAttribute("data-message-author-role") === "user") {
       return roleElement;
     }
 
-    const selectors = ['.markdown', '.prose', '.whitespace-pre-wrap'];
+    const selectors = [".markdown", ".prose", ".whitespace-pre-wrap"];
     for (const selector of selectors) {
       const contentElement = container.querySelector?.(selector);
       if (contentElement) return contentElement;
     }
 
-    return roleElement || (container.matches?.('article') ? container : null);
+    return roleElement || (container.matches?.("article") ? container : null);
   }
 
   getContentElements(container, roleElements) {
@@ -514,26 +600,27 @@ export class ChatGPTParser extends ChatParser {
 
   cleanContent(content) {
     return content
-      .replace(/^Show moreShow less$/gm, '')
-      .replace(/\n{3,}/g, '\n\n')
+      .replace(/^Show moreShow less$/gm, "")
+      .replace(/\n{3,}/g, "\n\n")
       .trim();
   }
 
   getMessageKey(container, roleElement, role, content) {
     const idElement =
-      roleElement?.closest?.('[data-message-id]') || container.querySelector?.('[data-message-id]');
-    const messageId = idElement?.getAttribute('data-message-id');
+      roleElement?.closest?.("[data-message-id]") ||
+      container.querySelector?.("[data-message-id]");
+    const messageId = idElement?.getAttribute("data-message-id");
     if (messageId) return messageId;
 
-    const turnId = container.getAttribute?.('data-testid');
+    const turnId = container.getAttribute?.("data-testid");
     if (turnId) return `${turnId}:${role}`;
 
-    return `${role}:${content.replace(/\s+/g, ' ').trim()}`;
+    return `${role}:${content.replace(/\s+/g, " ").trim()}`;
   }
 
   extractAttachments(container) {
     const attachments = [];
-    const rawContent = container.textContent || container.innerText || '';
+    const rawContent = container.textContent || container.innerText || "";
     const filePatterns = [
       /([a-zA-Z0-9_-]+\.tex)/g,
       /([a-zA-Z0-9_-]+\.txt)/g,
@@ -549,16 +636,18 @@ export class ChatGPTParser extends ChatParser {
     });
 
     foundFiles.forEach((fileName) => {
-      const fileExt = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase();
+      const fileExt = fileName
+        .substring(fileName.lastIndexOf(".") + 1)
+        .toLowerCase();
       const typeMap = {
-        tex: 'LaTeX',
-        txt: 'Text',
-        md: 'Markdown',
-        pdf: 'PDF',
-        doc: 'Document',
-        docx: 'Document',
+        tex: "LaTeX",
+        txt: "Text",
+        md: "Markdown",
+        pdf: "PDF",
+        doc: "Document",
+        docx: "Document",
       };
-      attachments.push({ name: fileName, type: typeMap[fileExt] || 'File' });
+      attachments.push({ name: fileName, type: typeMap[fileExt] || "File" });
     });
 
     return attachments;
@@ -568,15 +657,15 @@ export class ChatGPTParser extends ChatParser {
     const seenSrcs = new Set();
     const capturedImages = [];
 
-    container.querySelectorAll?.('img').forEach((img) => {
-      const src = img.getAttribute('src');
-      const alt = img.getAttribute('alt') || 'Image';
+    container.querySelectorAll?.("img").forEach((img) => {
+      const src = img.getAttribute("src");
+      const alt = img.getAttribute("alt") || "Image";
       const isContentImage =
-        src?.includes('backend-api') ||
-        src?.includes('files') ||
-        src?.startsWith('blob:') ||
-        alt.includes('Uploaded') ||
-        alt.includes('Generated');
+        src?.includes("backend-api") ||
+        src?.includes("files") ||
+        src?.startsWith("blob:") ||
+        alt.includes("Uploaded") ||
+        alt.includes("Generated");
 
       if (src && !seenSrcs.has(src) && isContentImage) {
         seenSrcs.add(src);
@@ -599,17 +688,17 @@ export class ChatGPTParser extends ChatParser {
     Object.entries(groupedAttachments).forEach(([type, files]) => {
       attachmentLines.push(`**${type} Files:**`);
       files.forEach((file) => attachmentLines.push(`- ${file}`));
-      attachmentLines.push('');
+      attachmentLines.push("");
     });
 
     if (capturedImages.length > 0) {
-      if (attachmentLines.length > 0) attachmentLines.push('');
-      attachmentLines.push('**Images:**');
+      if (attachmentLines.length > 0) attachmentLines.push("");
+      attachmentLines.push("**Images:**");
       capturedImages.forEach((image) => attachmentLines.push(`- ${image}`));
     }
 
     if (attachmentLines.length === 0) return content;
-    return `${content}\n\n**Attachments & Images:**\n${attachmentLines.join('\n')}`;
+    return `${content}\n\n**Attachments & Images:**\n${attachmentLines.join("\n")}`;
   }
 
   convertContentElement(contentElement) {
@@ -623,30 +712,41 @@ export class ChatGPTParser extends ChatParser {
     if (contentElements.length === 0) return null;
 
     const role = this.getMessageRole(container, roleElement);
-    const noiseSelectors = ['.flex.gap-2', 'button', '.sr-only', '[role="button"]'];
+    const noiseSelectors = [
+      ".flex.gap-2",
+      "button",
+      ".sr-only",
+      '[role="button"]',
+    ];
     const contentParts = contentElements
       .map((contentElement) => {
         const clone = contentElement.cloneNode(true);
-        clone.querySelectorAll('button').forEach((button) => {
-          const img = button.querySelector('img');
+        clone.querySelectorAll("button").forEach((button) => {
+          const img = button.querySelector("img");
           if (!img) return;
 
-          let caption = 'Image';
-          const ariaLabel = button.getAttribute('aria-label') || '';
-          if (ariaLabel.toLowerCase().includes('open image details for')) {
-            caption = ariaLabel.replace(/^Open image details for\s*/i, '').trim();
-          } else if (img.getAttribute('alt') && !img.getAttribute('alt').startsWith('http')) {
-            caption = img.getAttribute('alt').trim();
+          let caption = "Image";
+          const ariaLabel = button.getAttribute("aria-label") || "";
+          if (ariaLabel.toLowerCase().includes("open image details for")) {
+            caption = ariaLabel
+              .replace(/^Open image details for\s*/i, "")
+              .trim();
+          } else if (
+            img.getAttribute("alt") &&
+            !img.getAttribute("alt").startsWith("http")
+          ) {
+            caption = img.getAttribute("alt").trim();
           }
 
-          const alt = img.getAttribute('alt') || '';
-          const src = img.getAttribute('src') || '';
-          const imageUrl = alt.startsWith('http://') || alt.startsWith('https://') ? alt : src;
+          const alt = img.getAttribute("alt") || "";
+          const src = img.getAttribute("src") || "";
+          const imageUrl =
+            alt.startsWith("http://") || alt.startsWith("https://") ? alt : src;
 
           if (imageUrl) {
-            const newImg = clone.ownerDocument.createElement('img');
-            newImg.setAttribute('src', imageUrl);
-            newImg.setAttribute('alt', caption);
+            const newImg = clone.ownerDocument.createElement("img");
+            newImg.setAttribute("src", imageUrl);
+            newImg.setAttribute("alt", caption);
             button.parentNode.replaceChild(newImg, button);
           }
         });
@@ -658,7 +758,7 @@ export class ChatGPTParser extends ChatParser {
       })
       .filter(Boolean);
 
-    let content = contentParts.join('\n\n');
+    let content = contentParts.join("\n\n");
     content = this.appendAttachments(
       content,
       this.extractAttachments(container),
@@ -675,11 +775,11 @@ export class ChatGPTParser extends ChatParser {
   }
 
   extractMountedMessages() {
-    const articles = Array.from(document.querySelectorAll('article'));
+    const articles = Array.from(document.querySelectorAll("article"));
     const containers =
       articles.length > 0
         ? articles
-        : Array.from(document.querySelectorAll('[data-message-author-role]'));
+        : Array.from(document.querySelectorAll("[data-message-author-role]"));
 
     return containers
       .map((container) => this.extractMessage(container))
@@ -701,16 +801,22 @@ export class ChatGPTParser extends ChatParser {
   formatApiResult(convoData, apiMessages, fallbackTitle, images = {}) {
     const messages = [];
     for (const msg of apiMessages) {
-      let content = '';
+      let content = "";
       for (const seg of msg.segments) {
-        if (seg.type === 'text') {
-          content += cleanMarkdownFromApi(seg.content, msg.citeMap, msg.imageGroupMap) + '\n\n';
-        } else if (seg.type === 'thought') {
-          const thoughtText = cleanMarkdownFromApi(seg.content, msg.citeMap, msg.imageGroupMap);
+        if (seg.type === "text") {
+          content +=
+            cleanMarkdownFromApi(seg.content, msg.citeMap, msg.imageGroupMap) +
+            "\n\n";
+        } else if (seg.type === "thought") {
+          const thoughtText = cleanMarkdownFromApi(
+            seg.content,
+            msg.citeMap,
+            msg.imageGroupMap,
+          );
           if (thoughtText) {
             content += `<details><summary>Thought Process</summary>\n\n${thoughtText}\n\n</details>\n\n`;
           }
-        } else if (seg.type === 'image') {
+        } else if (seg.type === "image") {
           const src = images[seg.fileId];
           if (src) {
             content += `![Image](${src})\n\n`;
@@ -731,48 +837,55 @@ export class ChatGPTParser extends ChatParser {
     }
 
     const currentUrl =
-      typeof window !== 'undefined' && window.location ? window.location.href || '' : '';
+      typeof window !== "undefined" && window.location
+        ? window.location.href || ""
+        : "";
     const convTitle = convoData?.title || fallbackTitle;
     const metadata = {
-      Source: 'ChatGPT',
+      Source: "ChatGPT",
       Date: new Date().toLocaleString(),
       Link: currentUrl,
       Model:
         convoData?.model_slug ||
-        document.querySelector('[data-testid="model-selector-dropdown"]')?.innerText ||
-        'ChatGPT',
+        document.querySelector('[data-testid="model-selector-dropdown"]')
+          ?.innerText ||
+        "ChatGPT",
     };
 
     return { title: convTitle, messages, url: currentUrl, metadata };
   }
 
   async parse(options = {}) {
-    const title = document.title || 'ChatGPT Session';
+    const title = document.title || "ChatGPT Session";
     const messages = [];
 
     const token = getAccessToken();
     const convId = getConversationId();
-    const parserMode = options.parserMode || 'auto';
+    const parserMode = options.parserMode || "auto";
     const includeImages = options.includeImages !== false;
 
     // 1. If on shared chat URL (/share/...) or SSR conversation data exists in DOM, try SSR data first
     const isShareUrl =
-      typeof window !== 'undefined' &&
+      typeof window !== "undefined" &&
       window.location &&
-      (window.location.pathname || '').startsWith('/share/');
+      (window.location.pathname || "").startsWith("/share/");
     const sharedData = extractSharedConversationFromDom(
-      typeof document !== 'undefined' ? document : null,
+      typeof document !== "undefined" ? document : null,
     );
 
-    if (isShareUrl && sharedData?.mapping && parserMode !== 'prefer_dom') {
-      const apiMessages = linearize(sharedData.mapping, includeImages, sharedData.current_node);
+    if (isShareUrl && sharedData?.mapping && parserMode !== "prefer_dom") {
+      const apiMessages = linearize(
+        sharedData.mapping,
+        includeImages,
+        sharedData.current_node,
+      );
       if (apiMessages.length > 0) {
         return this.formatApiResult(sharedData, apiMessages, title);
       }
     }
 
     // 2. Try fetching from ChatGPT backend API
-    if (token && convId && parserMode !== 'prefer_dom') {
+    if (token && convId && parserMode !== "prefer_dom") {
       try {
         const now = Date.now();
         let result;
@@ -785,10 +898,10 @@ export class ChatGPTParser extends ChatParser {
         ) {
           result = this.lastFetch.result;
         } else {
-          if (!document.getElementById('ai-export-chatgpt-helper')) {
-            const script = document.createElement('script');
-            script.src = chrome.runtime.getURL('content/chatgpt_helper.js');
-            script.id = 'ai-export-chatgpt-helper';
+          if (!document.getElementById("ai-export-chatgpt-helper")) {
+            const script = document.createElement("script");
+            script.src = chrome.runtime.getURL("content/chatgpt_helper.js");
+            script.id = "ai-export-chatgpt-helper";
             script.onload = function () {
               this.remove();
             };
@@ -805,49 +918,69 @@ export class ChatGPTParser extends ChatParser {
           };
         }
 
-        const apiMessages = linearize(result.data.mapping, includeImages, result.data.current_node);
+        const apiMessages = linearize(
+          result.data.mapping,
+          includeImages,
+          result.data.current_node,
+        );
         if (apiMessages.length > 0) {
-          return this.formatApiResult(result.data, apiMessages, title, result.images);
+          return this.formatApiResult(
+            result.data,
+            apiMessages,
+            title,
+            result.images,
+          );
         }
       } catch (e) {
-        console.error('[AI Exporter] API parse failed, falling back to SSR/DOM:', e);
+        console.error(
+          "[AI Exporter] API parse failed, falling back to SSR/DOM:",
+          e,
+        );
       }
     }
 
     // 3. If API failed or was not available, check if SSR shared/embedded conversation data exists
-    if (sharedData?.mapping && parserMode !== 'prefer_dom') {
-      const apiMessages = linearize(sharedData.mapping, includeImages, sharedData.current_node);
+    if (sharedData?.mapping && parserMode !== "prefer_dom") {
+      const apiMessages = linearize(
+        sharedData.mapping,
+        includeImages,
+        sharedData.current_node,
+      );
       if (apiMessages.length > 0) {
         return this.formatApiResult(sharedData, apiMessages, title);
       }
     }
 
     // Check if we have iframe-based content (deep research feature)
-    const iframes = document.querySelectorAll('iframe[src*="oaiusercontent.com"]');
+    const iframes = document.querySelectorAll(
+      'iframe[src*="oaiusercontent.com"]',
+    );
     if (iframes.length > 0) {
-      console.log('Detected iframe-based content, attempting extraction...');
+      console.log("Detected iframe-based content, attempting extraction...");
 
       // Try multiple strategies to extract content
-      let extractedContent = '';
+      let extractedContent = "";
 
       // Strategy 1: Look for data in script tags or window objects
       try {
         // Check if any conversation data is exposed globally
         if (window.conversationData || window.chatData) {
-          extractedContent = JSON.stringify(window.conversationData || window.chatData);
+          extractedContent = JSON.stringify(
+            window.conversationData || window.chatData,
+          );
         }
       } catch (e) {
-        console.log('Global data access failed:', e);
+        console.log("Global data access failed:", e);
       }
 
       // Strategy 2: Look for preloaded content in hidden elements
       if (!extractedContent) {
         const hiddenSelectors = [
-          '[data-conversation]',
-          '[data-messages]',
-          '.conversation-data',
-          '.chat-transcript',
-          'pre[data-conversation]',
+          "[data-conversation]",
+          "[data-messages]",
+          ".conversation-data",
+          ".chat-transcript",
+          "pre[data-conversation]",
         ];
 
         for (const selector of hiddenSelectors) {
@@ -862,34 +995,34 @@ export class ChatGPTParser extends ChatParser {
       // Strategy 3: Enhanced text extraction from main content
       if (!extractedContent) {
         const mainContent =
-          document.querySelector('main') ||
+          document.querySelector("main") ||
           document.querySelector('[role="main"]') ||
-          document.querySelector('.conversation') ||
+          document.querySelector(".conversation") ||
           document.body;
 
         if (mainContent) {
           const textContent = mainContent.textContent || mainContent.innerText;
           if (textContent && textContent.trim()) {
-            const lines = textContent.split('\n').filter((line) => line.trim());
+            const lines = textContent.split("\n").filter((line) => line.trim());
 
             // Look for conversation patterns
             const conversationLines = lines.filter(
               (line) =>
                 line.length > 20 && // Substantial content
-                !line.includes('ChatGPT') &&
-                !line.includes('Regenerate') &&
-                !line.includes('Copy code') &&
-                !line.includes('Continue') &&
-                !line.includes('Share') &&
-                !line.includes('Thumb') &&
-                !line.includes('New chat') &&
-                !line.includes('Menu') &&
-                !line.includes('Settings') &&
-                !line.includes('History'),
+                !line.includes("ChatGPT") &&
+                !line.includes("Regenerate") &&
+                !line.includes("Copy code") &&
+                !line.includes("Continue") &&
+                !line.includes("Share") &&
+                !line.includes("Thumb") &&
+                !line.includes("New chat") &&
+                !line.includes("Menu") &&
+                !line.includes("Settings") &&
+                !line.includes("History"),
             );
 
             if (conversationLines.length > 0) {
-              extractedContent = conversationLines.join('\n\n');
+              extractedContent = conversationLines.join("\n\n");
             }
           }
         }
@@ -906,24 +1039,26 @@ export class ChatGPTParser extends ChatParser {
       // If we found content, try to structure it
       if (extractedContent) {
         // Try to identify user vs assistant messages
-        const lines = extractedContent.split('\n').filter((line) => line.trim());
+        const lines = extractedContent
+          .split("\n")
+          .filter((line) => line.trim());
 
         lines.forEach((line) => {
           if (line.length > 10) {
             // Simple heuristic: shorter lines are often user prompts
             if (
               line.length < 200 ||
-              line.includes('?') ||
-              line.includes('write') ||
-              line.includes('tell')
+              line.includes("?") ||
+              line.includes("write") ||
+              line.includes("tell")
             ) {
               messages.push({
-                role: 'User',
+                role: "User",
                 content: line.trim(),
               });
             } else {
               messages.push({
-                role: 'ChatGPT',
+                role: "ChatGPT",
                 content: line.trim(),
               });
             }
@@ -934,16 +1069,16 @@ export class ChatGPTParser extends ChatParser {
       // Add note about extraction method
       if (messages.length > 0) {
         messages.push({
-          role: 'ChatGPT',
+          role: "ChatGPT",
           content:
-            '*Note: Content extracted from iframe-based ChatGPT interface. Some formatting may be lost.*',
+            "*Note: Content extracted from iframe-based ChatGPT interface. Some formatting may be lost.*",
         });
       } else {
         // Last resort - add a message explaining the limitation
         messages.push({
-          role: 'ChatGPT',
+          role: "ChatGPT",
           content:
-            '*Note: ChatGPT is using iframe-based content that cannot be accessed by browser extensions. Please try exporting from a standard ChatGPT conversation.*',
+            "*Note: ChatGPT is using iframe-based content that cannot be accessed by browser extensions. Please try exporting from a standard ChatGPT conversation.*",
         });
       }
 
@@ -955,17 +1090,22 @@ export class ChatGPTParser extends ChatParser {
       ? await this.extractAllConversationTurns()
       : this.extractMountedMessages();
     messages.push(
-      ...(extractedMessages.length > 0 ? extractedMessages : this.extractMountedMessages()),
+      ...(extractedMessages.length > 0
+        ? extractedMessages
+        : this.extractMountedMessages()),
     );
 
     const currentUrl =
-      typeof window !== 'undefined' && window.location ? window.location.href || '' : '';
+      typeof window !== "undefined" && window.location
+        ? window.location.href || ""
+        : "";
     const metadata = {
-      Source: 'ChatGPT',
+      Source: "ChatGPT",
       Date: new Date().toLocaleString(),
       Link: currentUrl,
       Model:
-        document.querySelector('[data-testid="model-selector-dropdown"]')?.innerText || 'ChatGPT',
+        document.querySelector('[data-testid="model-selector-dropdown"]')
+          ?.innerText || "ChatGPT",
     };
 
     return { title, messages, url: currentUrl, metadata };

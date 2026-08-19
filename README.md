@@ -6,23 +6,23 @@ This package powers the AI chat extraction features in both [AI Chat Exporter](h
 
 ## Supported Platforms
 
-| Platform | Parser |
-|----------|--------|
-| ChatGPT | `ChatGPTParser` |
-| Claude | `ClaudeParser` |
-| Copilot | `CopilotParser` |
-| DeepSeek | `DeepSeekParser` |
-| Gemini | `GeminiParser` |
+| Platform            | Parser                    |
+| ------------------- | ------------------------- |
+| ChatGPT             | `ChatGPTParser`           |
+| Claude              | `ClaudeParser`            |
+| Copilot             | `CopilotParser`           |
+| DeepSeek            | `DeepSeekParser`          |
+| Gemini              | `GeminiParser`            |
 | Gemini Cloud Assist | `GeminiCloudAssistParser` |
-| Google AI Studio | `GoogleAIStudioParser` |
-| Google Search AI | `GoogleSearchAIParser` |
-| Lumo | `LumoParser` |
-| Meta AI | `MetaParser` |
-| Mistral | `MistralParser` |
-| NotebookLM | `NotebookLMParser` |
-| Perplexity | `PerplexityParser` |
-| Qwen | `QwenParser` |
-| Z AI | `ZAiParser` |
+| Google AI Studio    | `GoogleAIStudioParser`    |
+| Google Search AI    | `GoogleSearchAIParser`    |
+| Lumo                | `LumoParser`              |
+| Meta AI             | `MetaParser`              |
+| Mistral             | `MistralParser`           |
+| NotebookLM          | `NotebookLMParser`        |
+| Perplexity          | `PerplexityParser`        |
+| Qwen                | `QwenParser`              |
+| Z AI                | `ZAiParser`               |
 
 ## Installation
 
@@ -39,7 +39,7 @@ npm install decant-core@file:../parser-core
 ## Usage
 
 ```js
-import { detectPlatform, parsers, isAiChatUrl } from 'decant-core';
+import { detectPlatform, parsers, isAiChatUrl } from "decant-core";
 
 // Check if a URL is an AI chat platform
 if (isAiChatUrl(window.location.href)) {
@@ -60,13 +60,13 @@ if (isAiChatUrl(window.location.href)) {
 
 ```js
 // Individual parser
-import { ChatGPTParser } from 'decant-core';
+import { ChatGPTParser } from "decant-core";
 
 // Detection helpers
-import { detectPlatform, isAiChatUrl, AI_CHAT_DOMAINS } from 'decant-core';
+import { detectPlatform, isAiChatUrl, AI_CHAT_DOMAINS } from "decant-core";
 
 // Utilities
-import { convertToMarkdown, cleanMarkdown } from 'decant-core';
+import { convertToMarkdown, cleanMarkdown } from "decant-core";
 ```
 
 ## Project Structure
