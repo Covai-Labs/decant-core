@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/Covai-Labs/decant-core/compare/v1.0.0...v1.0.1) (2026-08-19)
+
+
+### Bug Fixes
+
+* **ci:** pass NPM_TOKEN to release workflow and format changelog ([9148fab](https://github.com/Covai-Labs/decant-core/commit/9148fabfb9f7ddd6ba2297be7ba3ea065559f0c9))
+
 # 1.0.0 (2026-08-19)
 
 ### Bug Fixes
