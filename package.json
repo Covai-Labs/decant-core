@@ -1,5 +1,5 @@
 {
-  "name": "@covai/parser-core",
+  "name": "decant-core",
   "version": "1.0.0",
   "description": "Shared AI chat platform parsers and detection for Covai browser extensions.",
   "type": "module",
@@ -9,6 +9,22 @@
     "./ai/*": "./ai/*.js",
     "./detection/*": "./detection/*.js"
   },
+  "files": [
+    "ai",
+    "detection",
+    "lib",
+    "utils",
+    "LICENSE",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Covai-Labs/decant-core.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Covai-Labs/decant-core/issues"
+  },
+  "homepage": "https://github.com/Covai-Labs/decant-core#readme",
   "scripts": {
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -21,9 +37,11 @@
     "chatgpt",
     "claude",
     "gemini",
+    "deepseek",
+    "copilot",
     "browser-extension"
   ],
-  "author": "Rat-S",
+  "author": "deadrat-in",
   "license": "AGPL-3.0-only",
   "dependencies": {
     "turndown": "^7.2.4"

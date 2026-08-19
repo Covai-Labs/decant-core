@@ -25,6 +25,8 @@ export { GoogleAIStudioParser } from './google_ai_studio.js';
 export { NotebookLMParser } from './notebooklm.js';
 export { GoogleSearchAIParser } from './google_search_ai.js';
 export { GeminiCloudAssistParser } from './gemini_cloud_assist.js';
+export { JoylandParser } from './joyland.js';
+export { ChubParser } from './chub.js';
 
 // Utilities
 export { convertToMarkdown, cleanMarkdown } from '../utils/html-to-markdown.js';

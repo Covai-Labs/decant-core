@@ -19,6 +19,9 @@ export const AI_CHAT_DOMAINS = [
   'notebooklm.google.com',
   'notebook.google.com',
   'chat.z.ai',
+  'joyland.ai',
+  'chub.ai',
+  'characterhub.org',
 ];
 
 /**

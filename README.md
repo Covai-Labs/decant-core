@@ -1,4 +1,4 @@
-# @covai/parser-core
+# decant-core
 
 Shared AI chat platform parsers and detection logic for [Covai](https://github.com/Covai-Labs) browser extensions.
 
@@ -27,19 +27,19 @@ This package powers the AI chat extraction features in both [AI Chat Exporter](h
 ## Installation
 
 ```bash
-npm install @covai/parser-core
+npm install decant-core
 ```
 
 For local development:
 
 ```bash
-npm install @covai/parser-core@file:../parser-core
+npm install decant-core@file:../parser-core
 ```
 
 ## Usage
 
 ```js
-import { detectPlatform, parsers, isAiChatUrl } from '@covai/parser-core';
+import { detectPlatform, parsers, isAiChatUrl } from 'decant-core';
 
 // Check if a URL is an AI chat platform
 if (isAiChatUrl(window.location.href)) {
@@ -60,13 +60,13 @@ if (isAiChatUrl(window.location.href)) {
 
 ```js
 // Individual parser
-import { ChatGPTParser } from '@covai/parser-core';
+import { ChatGPTParser } from 'decant-core';
 
 // Detection helpers
-import { detectPlatform, isAiChatUrl, AI_CHAT_DOMAINS } from '@covai/parser-core';
+import { detectPlatform, isAiChatUrl, AI_CHAT_DOMAINS } from 'decant-core';
 
 // Utilities
-import { convertToMarkdown, cleanMarkdown } from '@covai/parser-core';
+import { convertToMarkdown, cleanMarkdown } from 'decant-core';
 ```
 
 ## Project Structure

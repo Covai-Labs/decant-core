@@ -14,6 +14,8 @@ import { GoogleAIStudioParser } from '../ai/google_ai_studio.js';
 import { NotebookLMParser } from '../ai/notebooklm.js';
 import { GoogleSearchAIParser } from '../ai/google_search_ai.js';
 import { GeminiCloudAssistParser } from '../ai/gemini_cloud_assist.js';
+import { JoylandParser } from '../ai/joyland.js';
+import { ChubParser } from '../ai/chub.js';
 
 /**
  * Ordered list of parsers. First match wins.
@@ -35,6 +37,8 @@ export const parsers = [
   new NotebookLMParser(),
   new GoogleSearchAIParser(),
   new GeminiCloudAssistParser(),
+  new JoylandParser(),
+  new ChubParser(),
 ];
 
 /**
