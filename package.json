@@ -7,10 +7,14 @@
   "exports": {
     ".": "./ai/index.js",
     "./ai/*": "./ai/*.js",
+    "./web": "./web/index.js",
+    "./web/*": "./web/*.js",
+    "./article": "./web/article.js",
     "./detection/*": "./detection/*.js"
   },
   "files": [
     "ai",
+    "web",
     "detection",
     "lib",
     "utils",
@@ -26,6 +30,7 @@
   },
   "homepage": "https://github.com/Covai-Labs/decant-core#readme",
   "scripts": {
+    "test": "node --test tests/*.test.js",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
@@ -47,7 +52,11 @@
     "access": "public"
   },
   "dependencies": {
-    "turndown": "^7.2.4"
+    "@extractus/article-extractor": "^9.0.0",
+    "@mozilla/readability": "^0.6.0",
+    "defuddle": "^0.19.2",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -59,6 +68,7 @@
     "@semantic-release/release-notes-generator": "^14.1.1",
     "eslint": "^10.8.0",
     "globals": "^17.9.0",
+    "linkedom": "^0.18.13",
     "prettier": "^3.9.6",
     "semantic-release": "^25.0.9"
   }

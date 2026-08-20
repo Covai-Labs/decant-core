@@ -38,3 +38,11 @@ export {
   parsers,
 } from "../detection/detect-platform.js";
 export { AI_CHAT_DOMAINS } from "../detection/domains.js";
+
+// Web & Article Extraction
+export {
+  extractArticle,
+  extractArticleIntelligent,
+  ArticleParser,
+} from "../web/article.js";
+export { scoreContent, cleanTitle } from "../web/scoring.js";

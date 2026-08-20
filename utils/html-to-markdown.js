@@ -13,6 +13,7 @@
  * @returns {string} Markdown formatted text
  */
 import TurndownService from "../lib/turndown.js";
+import { strikethrough, taskListItems } from "turndown-plugin-gfm";
 
 /**
  * Convert an HTML element to markdown
@@ -34,6 +35,9 @@ export function convertToMarkdown(htmlContent, options = {}) {
     linkReferenceStyle: "full", // Full reference style for links
     ...options,
   });
+
+  // Enable GFM plugins (strikethrough and task list checkboxes)
+  turndownService.use([strikethrough, taskListItems]);
 
   // Add custom rules for better conversion
 
@@ -110,8 +114,9 @@ export function convertToMarkdown(htmlContent, options = {}) {
 
         // Convert each cell's HTML to markdown using the isolated service
         const cellContents = cells.map((cell) => {
-          let cellMarkdown = cellTurndown.turndown(cell.innerHTML);
+          let cellMarkdown = cellTurndown.turndown(cell);
           // Replace any actual newlines that Turndown generated (e.g. from P tags) with <br>
+
           // as tables cannot have literal newlines in GFM.
           return cellMarkdown.trim().replace(/\n/g, "<br>");
         });
@@ -135,7 +140,8 @@ export function convertToMarkdown(htmlContent, options = {}) {
     html = htmlContent;
   } else if (
     htmlContent &&
-    (htmlContent instanceof HTMLElement ||
+    ((typeof HTMLElement !== "undefined" &&
+      htmlContent instanceof HTMLElement) ||
       htmlContent.nodeType === 1 ||
       htmlContent.nodeType === 9 ||
       typeof htmlContent.querySelectorAll === "function")
@@ -370,9 +376,18 @@ export function convertToMarkdown(htmlContent, options = {}) {
   } catch (error) {
     console.error("Error converting HTML to markdown:", error);
     // Fallback to plain text
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-    return doc.body.innerText || doc.body.textContent || "";
+    if (typeof DOMParser !== "undefined") {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      return doc.body?.innerText || doc.body?.textContent || "";
+    }
+    if (typeof html === "string") {
+      return html
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+    return html?.textContent || "";
   }
 }
 
