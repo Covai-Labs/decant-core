@@ -109,6 +109,7 @@ export class MetaParser extends ChatParser {
       Source: "Meta AI",
       Date: new Date().toLocaleString(),
       Link: currentUrl,
+      Method: "DOM",
     };
 
     return { title, messages, url: currentUrl, metadata };

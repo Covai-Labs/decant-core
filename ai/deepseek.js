@@ -108,7 +108,12 @@ export class DeepSeekParser extends ChatParser {
       if (token && sessionId) {
         const apiMessages = await fetchDeepSeekConversation(sessionId, token);
         if (apiMessages && apiMessages.length > 0) {
-          return { title, messages: apiMessages, url: currentUrl, metadata };
+          return {
+            title,
+            messages: apiMessages,
+            url: currentUrl,
+            metadata: { ...metadata, Method: "API" },
+          };
         }
       }
     } catch (e) {
@@ -159,6 +164,11 @@ export class DeepSeekParser extends ChatParser {
       });
     }
 
-    return { title, messages, url: currentUrl, metadata };
+    return {
+      title,
+      messages,
+      url: currentUrl,
+      metadata: { ...metadata, Method: "DOM" },
+    };
   }
 }

@@ -55,6 +55,7 @@ export class MistralParser extends ChatParser {
       Source: "Mistral",
       Date: new Date().toLocaleString(),
       Link: currentUrl,
+      Method: "DOM",
     };
 
     return { title, messages, url: currentUrl, metadata };

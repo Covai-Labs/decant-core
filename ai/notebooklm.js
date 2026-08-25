@@ -149,6 +149,7 @@ export class NotebookLMParser extends ChatParser {
       Source: "NotebookLM",
       Date: new Date().toLocaleString(),
       Link: currentUrl,
+      Method: "DOM",
     };
 
     return { title, messages, url: currentUrl, metadata };

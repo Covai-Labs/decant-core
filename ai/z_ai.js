@@ -100,6 +100,7 @@ export class ZAiParser extends ChatParser {
       Source: "Z.ai",
       Date: new Date().toLocaleString(),
       Link: currentUrl,
+      Method: "DOM",
     };
 
     return { title, messages, url: currentUrl, metadata };

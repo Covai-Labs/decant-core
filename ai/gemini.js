@@ -721,6 +721,7 @@ export class GeminiParser extends ChatParser {
         Source: "Gemini",
         Date: new Date().toLocaleString(),
         Link: currentUrl,
+        Method: "DOM",
       };
 
       return {
@@ -743,6 +744,7 @@ export class GeminiParser extends ChatParser {
           Source: "Gemini",
           Date: new Date().toLocaleString(),
           Link: currentUrl,
+          Method: "DOM",
         },
       };
     }

@@ -798,7 +798,13 @@ export class ChatGPTParser extends ChatParser {
     });
   }
 
-  formatApiResult(convoData, apiMessages, fallbackTitle, images = {}) {
+  formatApiResult(
+    convoData,
+    apiMessages,
+    fallbackTitle,
+    images = {},
+    method = "API",
+  ) {
     const messages = [];
     for (const msg of apiMessages) {
       let content = "";
@@ -850,6 +856,7 @@ export class ChatGPTParser extends ChatParser {
         document.querySelector('[data-testid="model-selector-dropdown"]')
           ?.innerText ||
         "ChatGPT",
+      Method: method,
     };
 
     return { title: convTitle, messages, url: currentUrl, metadata };
@@ -880,7 +887,13 @@ export class ChatGPTParser extends ChatParser {
         sharedData.current_node,
       );
       if (apiMessages.length > 0) {
-        return this.formatApiResult(sharedData, apiMessages, title);
+        return this.formatApiResult(
+          sharedData,
+          apiMessages,
+          title,
+          {},
+          "SSR",
+        );
       }
     }
 
@@ -929,6 +942,7 @@ export class ChatGPTParser extends ChatParser {
             apiMessages,
             title,
             result.images,
+            "API",
           );
         }
       } catch (e) {
@@ -947,7 +961,13 @@ export class ChatGPTParser extends ChatParser {
         sharedData.current_node,
       );
       if (apiMessages.length > 0) {
-        return this.formatApiResult(sharedData, apiMessages, title);
+        return this.formatApiResult(
+          sharedData,
+          apiMessages,
+          title,
+          {},
+          "SSR",
+        );
       }
     }
 
@@ -1082,7 +1102,18 @@ export class ChatGPTParser extends ChatParser {
         });
       }
 
-      return { title, messages };
+      const currentUrl =
+        typeof window !== "undefined" && window.location
+          ? window.location.href || ""
+          : "";
+      const metadata = {
+        Source: "ChatGPT",
+        Date: new Date().toLocaleString(),
+        Link: currentUrl,
+        Method: "DOM",
+      };
+
+      return { title, messages, url: currentUrl, metadata };
     }
 
     const fullExport = options.full !== false;
@@ -1106,6 +1137,7 @@ export class ChatGPTParser extends ChatParser {
       Model:
         document.querySelector('[data-testid="model-selector-dropdown"]')
           ?.innerText || "ChatGPT",
+      Method: "DOM",
     };
 
     return { title, messages, url: currentUrl, metadata };

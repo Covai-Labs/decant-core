@@ -76,6 +76,7 @@ export class JoylandParser extends ChatParser {
       Source: "Joyland",
       Date: new Date().toLocaleString(),
       Link: currentUrl,
+      Method: "DOM",
     };
     if (botName) metadata.Character = botName;
     if (creator) metadata.Creator = creator;

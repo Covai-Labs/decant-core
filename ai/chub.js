@@ -81,6 +81,7 @@ export class ChubParser extends ChatParser {
       Source: "Chub",
       Date: new Date().toLocaleString(),
       Link: currentUrl,
+      Method: "DOM",
     };
     if (character) metadata.Character = character;
     if (user) metadata.User = user;

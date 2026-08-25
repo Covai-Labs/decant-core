@@ -440,6 +440,7 @@ export class CopilotParser extends ChatParser {
       Source: "Copilot",
       Date: new Date().toLocaleString(),
       Link: currentUrl,
+      Method: "DOM",
     };
 
     return { title, messages, url: currentUrl, metadata };

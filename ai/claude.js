@@ -284,6 +284,7 @@ export class ClaudeParser extends ChatParser {
             Date: new Date().toLocaleString(),
             Link: currentUrl,
             Model: data.model || "Claude",
+            Method: "API",
           };
 
           return { title: convTitle, messages, url: currentUrl, metadata };
@@ -430,6 +431,7 @@ export class ClaudeParser extends ChatParser {
       Date: new Date().toLocaleString(),
       Link: currentUrl,
       Model: "Claude",
+      Method: "DOM",
     };
 
     return { title, messages, url: currentUrl, metadata };

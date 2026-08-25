@@ -127,6 +127,7 @@ export class GoogleAIStudioParser extends ChatParser {
       Source: "Google AI Studio",
       Date: new Date().toLocaleString(),
       Link: currentUrl,
+      Method: "DOM",
     };
 
     return { title, messages, url: currentUrl, metadata };
