@@ -1,3 +1,15 @@
+# [1.2.0](https://github.com/Covai-Labs/decant-core/compare/v1.1.0...v1.2.0) (2026-08-25)
+
+
+### Bug Fixes
+
+* just prettier ([1cd3a36](https://github.com/Covai-Labs/decant-core/commit/1cd3a3620573f6a6d9462928939c12f9cab63a8d))
+
+
+### Features
+
+* standardize extraction method metadata across all AI parsers and add validation tests ([175a990](https://github.com/Covai-Labs/decant-core/commit/175a99065bd0016261a6b2dd98f0b97396dd10e0))
+
 # [1.1.0](https://github.com/Covai-Labs/decant-core/compare/v1.0.1...v1.1.0) (2026-08-20)
 
 ### Features
