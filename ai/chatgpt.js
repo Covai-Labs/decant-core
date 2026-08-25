@@ -887,13 +887,7 @@ export class ChatGPTParser extends ChatParser {
         sharedData.current_node,
       );
       if (apiMessages.length > 0) {
-        return this.formatApiResult(
-          sharedData,
-          apiMessages,
-          title,
-          {},
-          "SSR",
-        );
+        return this.formatApiResult(sharedData, apiMessages, title, {}, "SSR");
       }
     }
 
@@ -961,13 +955,7 @@ export class ChatGPTParser extends ChatParser {
         sharedData.current_node,
       );
       if (apiMessages.length > 0) {
-        return this.formatApiResult(
-          sharedData,
-          apiMessages,
-          title,
-          {},
-          "SSR",
-        );
+        return this.formatApiResult(sharedData, apiMessages, title, {}, "SSR");
       }
     }
 

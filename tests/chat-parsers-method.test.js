@@ -25,7 +25,13 @@ test("ChatGPTParser formats API result with Method: API by default", () => {
     },
   ];
 
-  const result = parser.formatApiResult(convoData, apiMessages, "Fallback Title", {}, "API");
+  const result = parser.formatApiResult(
+    convoData,
+    apiMessages,
+    "Fallback Title",
+    {},
+    "API",
+  );
   assert.equal(result.metadata.Method, "API");
   assert.equal(result.metadata.Model, "gpt-4o");
   assert.equal(result.messages.length, 2);
@@ -44,12 +50,20 @@ test("ChatGPTParser formats SSR result with Method: SSR", () => {
     },
   ];
 
-  const result = parser.formatApiResult(convoData, apiMessages, "Fallback Title", {}, "SSR");
+  const result = parser.formatApiResult(
+    convoData,
+    apiMessages,
+    "Fallback Title",
+    {},
+    "SSR",
+  );
   assert.equal(result.metadata.Method, "SSR");
 });
 
 test("GeminiParser sets Method: DOM in metadata", async () => {
-  const { document, window } = parseHTML("<html><head><title>Gemini Test</title></head><body></body></html>");
+  const { document, window } = parseHTML(
+    "<html><head><title>Gemini Test</title></head><body></body></html>",
+  );
   globalThis.document = document;
   globalThis.window = window;
 
@@ -60,7 +74,9 @@ test("GeminiParser sets Method: DOM in metadata", async () => {
 });
 
 test("CopilotParser sets Method: DOM in metadata", async () => {
-  const { document, window } = parseHTML("<html><head><title>Copilot Test</title></head><body></body></html>");
+  const { document, window } = parseHTML(
+    "<html><head><title>Copilot Test</title></head><body></body></html>",
+  );
   globalThis.document = document;
   globalThis.window = window;
 
@@ -71,7 +87,9 @@ test("CopilotParser sets Method: DOM in metadata", async () => {
 });
 
 test("PerplexityParser sets Method: DOM in metadata", async () => {
-  const { document, window } = parseHTML("<html><head><title>Perplexity Test</title></head><body></body></html>");
+  const { document, window } = parseHTML(
+    "<html><head><title>Perplexity Test</title></head><body></body></html>",
+  );
   globalThis.document = document;
   globalThis.window = window;
 
