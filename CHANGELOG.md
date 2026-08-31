@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/Covai-Labs/decant-core/compare/v1.2.0...v1.2.1) (2026-08-31)
+
+
+### Bug Fixes
+
+* **gemini:** clean up console logs and simplify deep research extraction ([e8990a3](https://github.com/Covai-Labs/decant-core/commit/e8990a38c63f3ed92b2ba10ae1e3b92809f72de6))
+
 # [1.2.0](https://github.com/Covai-Labs/decant-core/compare/v1.1.0...v1.2.0) (2026-08-25)
 
 ### Bug Fixes
