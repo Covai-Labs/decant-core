@@ -4,6 +4,16 @@ import { convertToMarkdown } from "../utils/html-to-markdown.js";
 const GEMINI_RPC_ID = "hNvQHb";
 const DEFAULT_BARD_PATH = "/_/BardChatUi";
 
+function isValidMessageText(str, convoId = "") {
+  if (typeof str !== "string") return false;
+  const trimmed = str.trim();
+  if (!trimmed) return false;
+  if (/^(?:c_|rc_|r_)[a-zA-Z0-9_-]+$/.test(trimmed)) return false;
+  if (convoId && (trimmed === convoId || trimmed === `c_${convoId}`))
+    return false;
+  return true;
+}
+
 export class GeminiParser extends ChatParser {
   name = "Gemini";
 
@@ -84,7 +94,23 @@ export class GeminiParser extends ChatParser {
 
     const mode = options.parserMode || "auto";
 
-    // Attempt API / RPC extraction first when in auto mode and in real browser
+    // 1. Prefer DOM extraction first when on a live page with conversation containers
+    if (typeof document !== "undefined" && document.querySelector) {
+      const hasDomMessages = document.querySelector(
+        ".conversation-container, user-query, model-response, deep-research-immersive-panel",
+      );
+      if (hasDomMessages && mode !== "api") {
+        const domResult = this.parseFromDom(currentUrl, options);
+        if (domResult && domResult.messages && domResult.messages.length > 0) {
+          console.log(
+            `[Gemini Parser] Successfully parsed ${domResult.messages.length} messages from DOM`,
+          );
+          return domResult;
+        }
+      }
+    }
+
+    // 2. Attempt API / RPC extraction if DOM parsing didn't find messages or mode is API
     if (mode !== "dom" && typeof fetch === "function") {
       try {
         const convoId = this.getConversationId(currentUrl);
@@ -104,7 +130,10 @@ export class GeminiParser extends ChatParser {
           if (
             apiResult &&
             apiResult.messages &&
-            apiResult.messages.length > 0
+            apiResult.messages.length > 0 &&
+            apiResult.messages.some((m) =>
+              isValidMessageText(m.content, convoId),
+            )
           ) {
             console.log(
               `[Gemini Parser] Successfully parsed ${apiResult.messages.length} messages via API`,
