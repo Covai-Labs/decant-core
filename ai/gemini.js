@@ -4,12 +4,13 @@ import { convertToMarkdown } from "../utils/html-to-markdown.js";
 const GEMINI_RPC_ID = "hNvQHb";
 const DEFAULT_BARD_PATH = "/_/BardChatUi";
 
-function isValidMessageText(str, convoId = '') {
-  if (typeof str !== 'string') return false;
+function isValidMessageText(str, convoId = "") {
+  if (typeof str !== "string") return false;
   const trimmed = str.trim();
   if (!trimmed) return false;
   if (/^(?:c_|rc_|r_)[a-zA-Z0-9_-]+$/.test(trimmed)) return false;
-  if (convoId && (trimmed === convoId || trimmed === `c_${convoId}`)) return false;
+  if (convoId && (trimmed === convoId || trimmed === `c_${convoId}`))
+    return false;
   return true;
 }
 
@@ -130,7 +131,9 @@ export class GeminiParser extends ChatParser {
             apiResult &&
             apiResult.messages &&
             apiResult.messages.length > 0 &&
-            apiResult.messages.some((m) => isValidMessageText(m.content, convoId))
+            apiResult.messages.some((m) =>
+              isValidMessageText(m.content, convoId),
+            )
           ) {
             console.log(
               `[Gemini Parser] Successfully parsed ${apiResult.messages.length} messages via API`,
