@@ -1,3 +1,11 @@
+## [1.2.2](https://github.com/Covai-Labs/decant-core/compare/v1.2.1...v1.2.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* **gemini:** prioritize DOM extraction & validate API response content ([#1](https://github.com/Covai-Labs/decant-core/issues/1)) ([84ab6cb](https://github.com/Covai-Labs/decant-core/commit/84ab6cb01910c2cd5b2e45ae97ef7060fc597f8a))
+* **gemini:** prioritize DOM parsing and validate API message content ([5b44011](https://github.com/Covai-Labs/decant-core/commit/5b44011390ec94bf17ee79307d2f5dfe09ff2b94))
+
 ## [1.2.1](https://github.com/Covai-Labs/decant-core/compare/v1.2.0...v1.2.1) (2026-08-31)
 
 ### Bug Fixes
