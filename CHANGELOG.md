@@ -1,9 +1,8 @@
 ## [1.2.3](https://github.com/Covai-Labs/decant-core/compare/v1.2.2...v1.2.3) (2026-09-06)
 
-
 ### Bug Fixes
 
-* preserve latex math without turndown escaping ([68dbdef](https://github.com/Covai-Labs/decant-core/commit/68dbdef00599625c4c9786f556805f810edea900))
+- preserve latex math without turndown escaping ([68dbdef](https://github.com/Covai-Labs/decant-core/commit/68dbdef00599625c4c9786f556805f810edea900))
 
 ## [1.2.2](https://github.com/Covai-Labs/decant-core/compare/v1.2.1...v1.2.2) (2026-09-01)
 

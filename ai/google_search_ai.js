@@ -1,6 +1,70 @@
 import { ChatParser } from "./base.js";
 import { convertToMarkdown } from "../utils/html-to-markdown.js";
 
+export function sanitizeResponseContainer(container) {
+  if (!container) return container;
+  const clone =
+    typeof container.cloneNode === "function"
+      ? container.cloneNode(true)
+      : container;
+
+  // 1. Remove script, style, and noscript elements to prevent inline script leakage
+  const unwanted = clone.querySelectorAll
+    ? clone.querySelectorAll("script, style, noscript")
+    : [];
+  unwanted.forEach((el) => el.remove());
+
+  // 2. Remove base64 inline images to prevent megabyte-scale text walls in markdown exports
+  const images = clone.querySelectorAll ? clone.querySelectorAll("img") : [];
+  images.forEach((img) => {
+    const src = img.getAttribute("src") || "";
+    if (src.startsWith("data:image/")) {
+      img.remove();
+    }
+  });
+
+  // 3. Unwrap Google tracking redirects (/goto?url=..., /url?q=...) to direct URLs
+  const links = clone.querySelectorAll ? clone.querySelectorAll("a[href]") : [];
+  links.forEach((a) => {
+    const href = a.getAttribute("href") || "";
+    if (
+      href.startsWith("/goto?") ||
+      href.startsWith("/url?") ||
+      href.includes("google.com/url?") ||
+      href.includes("google.com/goto?")
+    ) {
+      try {
+        const parsed = new URL(href, "https://www.google.com");
+        const target =
+          parsed.searchParams.get("url") || parsed.searchParams.get("q");
+        if (
+          target &&
+          (target.startsWith("http://") || target.startsWith("https://"))
+        ) {
+          a.setAttribute("href", target);
+        }
+      } catch {
+        // Keep original href if URL parsing fails
+      }
+    }
+
+    // 4. Remove empty link shells left behind by stripped images/tracking icons
+    if (!a.textContent.trim() && !a.querySelector("img, svg")) {
+      a.remove();
+    }
+  });
+
+  return clone;
+}
+
+export function cleanMarkdownSpacing(markdown) {
+  if (!markdown) return "";
+  return markdown
+    .replace(/[ \t]+$/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export class GoogleSearchAIParser extends ChatParser {
   name = "Google Search AI";
   isAvailable(url) {
@@ -94,9 +158,10 @@ export class GoogleSearchAIParser extends ChatParser {
     const minLength = Math.min(queries.length, responseContainers.length);
     for (let i = 0; i < minLength; i++) {
       messages.push({ role: "User", content: queries[i].trim() });
-      const text = convertToMarkdown(responseContainers[i]);
-      if (text.trim()) {
-        messages.push({ role: "Model", content: text.trim() });
+      const cleanContainer = sanitizeResponseContainer(responseContainers[i]);
+      const text = cleanMarkdownSpacing(convertToMarkdown(cleanContainer));
+      if (text) {
+        messages.push({ role: "Model", content: text });
       }
     }
 
