@@ -22,6 +22,21 @@ import { strikethrough, taskListItems } from "turndown-plugin-gfm";
  * @returns {string} Markdown formatted text
  */
 export function convertToMarkdown(htmlContent, options = {}) {
+  const mathPlaceholders = [];
+  let mathCounter = 0;
+
+  const registerMath = (element, latex, isBlock, doc) => {
+    if (!element || !element.parentNode) return;
+    const cleanLatex = (latex || "").trim();
+    if (!cleanLatex) return;
+    const token = "DECANTMATHPLACEHOLDER" + mathCounter++ + "X";
+    const text = isBlock
+      ? "\n\n$$" + cleanLatex + "$$\n\n"
+      : "$" + cleanLatex + "$";
+    mathPlaceholders.push({ token, text });
+    const textNode = doc.createTextNode(token);
+    element.parentNode.replaceChild(textNode, element);
+  };
   // Configure Turndown service
   const turndownService = new TurndownService({
     headingStyle: "atx", // Use # for headings (not underline style)
@@ -149,57 +164,20 @@ export function convertToMarkdown(htmlContent, options = {}) {
     // Clone the element to avoid modifying the original
     const clone = htmlContent.cloneNode(true);
 
-    // Convert math equations (KaTeX and data-math) to standard markdown math blocks
-    // 1. Process block display KaTeX
-    clone.querySelectorAll(".katex-display").forEach((el) => {
-      const annotation = el.querySelector(
-        'annotation[encoding="application/x-tex"]',
-      );
-      if (annotation) {
-        const latex = annotation.textContent.trim();
-        const textNode = clone.ownerDocument.createTextNode(
-          `\n\n$$${latex}$$\n\n`,
-        );
-        el.parentNode.replaceChild(textNode, el);
-      } else {
-        const textNode = clone.ownerDocument.createTextNode(
-          `\n\n$$${el.textContent.trim()}$$\n\n`,
-        );
-        el.parentNode.replaceChild(textNode, el);
-      }
-    });
-
-    // 2. Process inline KaTeX
-    clone.querySelectorAll(".katex").forEach((el) => {
-      if (!el.parentNode) return;
-      const annotation = el.querySelector(
-        'annotation[encoding="application/x-tex"]',
-      );
-      if (annotation) {
-        const latex = annotation.textContent.trim();
-        const textNode = clone.ownerDocument.createTextNode(`$${latex}$`);
-        el.parentNode.replaceChild(textNode, el);
-      } else {
-        const textNode = clone.ownerDocument.createTextNode(
-          `$${el.textContent.trim()}$`,
-        );
-        el.parentNode.replaceChild(textNode, el);
-      }
-    });
-
-    // 3. Process Gemini-style data-math attributes
+    // Convert math equations (KaTeX, data-math, and data-xpm-latex) to standard markdown math blocks
+    // Use alphanumeric placeholder tokens so Turndown text-escaping engine never corrupts LaTeX
+    // 1. Process Gemini-style data-math attributes first (removes child .katex spans so they are not double-processed)
     clone.querySelectorAll("[data-math]").forEach((el) => {
-      if (!el.parentNode) return;
+      if (!clone.contains(el)) return;
       const latex = el.getAttribute("data-math");
       const isBlock =
         el.classList.contains("math-block") || el.tagName === "DIV";
-      const replacementText = isBlock ? `\n\n$$${latex}$$\n\n` : `$${latex}$`;
-      const textNode = clone.ownerDocument.createTextNode(replacementText);
-      el.parentNode.replaceChild(textNode, el);
+      registerMath(el, latex, isBlock, clone.ownerDocument);
     });
 
-    // 4. Process Google Search SGE LaTeX images with [data-xpm-latex]
+    // 2. Process Google Search SGE LaTeX images with [data-xpm-latex]
     clone.querySelectorAll("[data-xpm-latex]").forEach((el) => {
+      if (!clone.contains(el)) return;
       const copyRoot = el.closest("[data-xpm-copy-root]");
       if (!copyRoot) return;
       const container = el.closest(".cPGBZb") || copyRoot;
@@ -217,9 +195,31 @@ export function convertToMarkdown(htmlContent, options = {}) {
         isBlock = parentText === "";
       }
 
-      const replacementText = isBlock ? `\n\n$$${latex}$$\n\n` : `$${latex}$`;
-      const textNode = clone.ownerDocument.createTextNode(replacementText);
-      container.parentNode.replaceChild(textNode, container);
+      registerMath(container, latex, isBlock, clone.ownerDocument);
+    });
+
+    // 3. Process block display KaTeX (.katex-display)
+    clone.querySelectorAll(".katex-display").forEach((el) => {
+      if (!clone.contains(el)) return;
+      const annotation = el.querySelector(
+        'annotation[encoding="application/x-tex"]',
+      );
+      const latex = annotation
+        ? annotation.textContent.trim()
+        : el.textContent.trim();
+      registerMath(el, latex, true, clone.ownerDocument);
+    });
+
+    // 4. Process inline KaTeX (.katex)
+    clone.querySelectorAll(".katex").forEach((el) => {
+      if (!clone.contains(el)) return;
+      const annotation = el.querySelector(
+        'annotation[encoding="application/x-tex"]',
+      );
+      const latex = annotation
+        ? annotation.textContent.trim()
+        : el.textContent.trim();
+      registerMath(el, latex, false, clone.ownerDocument);
     });
 
     // Preprocess code blocks (pre elements) to normalize formatting and language tags
@@ -371,7 +371,10 @@ export function convertToMarkdown(htmlContent, options = {}) {
   }
 
   try {
-    const markdown = turndownService.turndown(html);
+    let markdown = turndownService.turndown(html);
+    for (const { token, text } of mathPlaceholders) {
+      markdown = markdown.replace(token, () => text);
+    }
     return markdown.trim();
   } catch (error) {
     console.error("Error converting HTML to markdown:", error);
