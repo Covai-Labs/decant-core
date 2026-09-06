@@ -1,3 +1,10 @@
+## [1.2.4](https://github.com/Covai-Labs/decant-core/compare/v1.2.3...v1.2.4) (2026-09-06)
+
+
+### Bug Fixes
+
+* **google-search-ai:** sanitize scripts, base64 images and tracking links (Covai-Labs/ai-chat-exporter[#29](https://github.com/Covai-Labs/decant-core/issues/29)) ([f70bd42](https://github.com/Covai-Labs/decant-core/commit/f70bd42e76b163ec9b4ab2689ea0537531a7901d))
+
 ## [1.2.3](https://github.com/Covai-Labs/decant-core/compare/v1.2.2...v1.2.3) (2026-09-06)
 
 ### Bug Fixes
