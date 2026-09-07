@@ -50,6 +50,18 @@ test("sanitizeResponseContainer removes data:image base64 images while preservin
   assert.equal(images[0].getAttribute("alt"), "Valid Web Image");
 });
 
+test("sanitizeResponseContainer preserves math LaTeX images marked with data-xpm-latex", () => {
+  const { document } = parseHTML(
+    '<div><img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" data-xpm-latex="e^{i\\pi}+1=0"><img src="data:image/png;base64,ABCDEF" alt="Normal base64"></div>',
+  );
+  const container = document.querySelector("div");
+  const clean = sanitizeResponseContainer(container);
+
+  const images = clean.querySelectorAll("img");
+  assert.equal(images.length, 1);
+  assert.equal(images[0].getAttribute("data-xpm-latex"), "e^{i\\pi}+1=0");
+});
+
 test("sanitizeResponseContainer unwraps /goto and /url tracking redirects to direct target URLs", () => {
   const { document } = parseHTML(
     '<div><a href="/goto?url=https%3A%2F%2Fexample.com%2Fdocs%2Farticle">Doc Article</a><a href="/url?q=https%3A%2F%2Fwikipedia.org%2Fwiki%2FTest">Wiki Source</a><a href="https://direct.com/page">Direct Link</a></div>',

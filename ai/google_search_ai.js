@@ -14,11 +14,12 @@ export function sanitizeResponseContainer(container) {
     : [];
   unwanted.forEach((el) => el.remove());
 
-  // 2. Remove base64 inline images to prevent megabyte-scale text walls in markdown exports
+  // 2. Remove base64 inline images to prevent megabyte-scale text walls in markdown exports,
+  // while preserving math LaTeX equation images marked with data-xpm-latex
   const images = clone.querySelectorAll ? clone.querySelectorAll("img") : [];
   images.forEach((img) => {
     const src = img.getAttribute("src") || "";
-    if (src.startsWith("data:image/")) {
+    if (src.startsWith("data:image/") && !img.hasAttribute("data-xpm-latex")) {
       img.remove();
     }
   });
