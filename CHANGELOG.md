@@ -1,3 +1,11 @@
+# [1.3.0](https://github.com/Covai-Labs/decant-core/compare/v1.2.6...v1.3.0) (2026-09-07)
+
+
+### Features
+
+* disable article extraction for content in subframes by checking window hierarchy ([a0032f6](https://github.com/Covai-Labs/decant-core/commit/a0032f68df60cc7b41238f13eff25150fcbf5368))
+* improve ChatGPT math rendering and cleanup by supporting data-math-source and adding new noise filters. ([e3017e9](https://github.com/Covai-Labs/decant-core/commit/e3017e9d5c8865bedf7689ece681761c05746076))
+
 ## [1.2.6](https://github.com/Covai-Labs/decant-core/compare/v1.2.5...v1.2.6) (2026-09-07)
 
 
