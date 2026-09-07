@@ -1,3 +1,10 @@
+## [1.2.5](https://github.com/Covai-Labs/decant-core/compare/v1.2.4...v1.2.5) (2026-09-07)
+
+
+### Bug Fixes
+
+* katex rendering ([6584dbd](https://github.com/Covai-Labs/decant-core/commit/6584dbd00d599b1d2ae68334c1fb7739ca7d6ade))
+
 ## [1.2.4](https://github.com/Covai-Labs/decant-core/compare/v1.2.3...v1.2.4) (2026-09-06)
 
 ### Bug Fixes
