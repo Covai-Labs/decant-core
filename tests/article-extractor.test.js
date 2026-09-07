@@ -98,6 +98,20 @@ test("ArticleParser conforms to decant-core Parser interface", async () => {
   assert.equal(parser.isAvailable("http://localhost:3000"), true);
   assert.equal(parser.isAvailable("chrome://extensions"), false);
 
+  // Subframe test: when window.self !== window.top, isAvailable must be false
+  globalThis.window = {
+    self: {},
+    top: {},
+  };
+  try {
+    assert.equal(parser.isAvailable("https://example.com/subframe"), false);
+    // When window.self === window.top, isAvailable must be true
+    globalThis.window.top = globalThis.window.self;
+    assert.equal(parser.isAvailable("https://example.com/topframe"), true);
+  } finally {
+    delete globalThis.window;
+  }
+
   const html = `
     <html>
       <head><title>Test Page</title></head>

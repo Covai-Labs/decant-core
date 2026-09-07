@@ -241,6 +241,14 @@ export class ArticleParser extends ChatParser {
    */
   isAvailable(url) {
     if (!url || typeof url !== "string") return false;
+    if (
+      typeof window !== "undefined" &&
+      window.self &&
+      window.top &&
+      window.self !== window.top
+    ) {
+      return false;
+    }
     return (
       url.startsWith("http://") ||
       url.startsWith("https://") ||
