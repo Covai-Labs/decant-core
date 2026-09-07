@@ -30,6 +30,7 @@ export { ChubParser } from "./chub.js";
 
 // Utilities
 export { convertToMarkdown, cleanMarkdown } from "../utils/html-to-markdown.js";
+export { normalizeLatexMath, cleanLatexMath } from "../utils/latex-math.js";
 
 // Detection
 export {

@@ -62,3 +62,81 @@ test("KaTeX with annotation correctly extracts LaTeX as math blocks", () => {
   const md = convertToMarkdown(el);
   assert.equal(md, "$$\\int_0^1 x^2 dx = \\frac{1}{3}$$");
 });
+
+test("normalizeLatexMath converts multi-line bracket display math to $$ and inline to $ while protecting code", async () => {
+  const { normalizeLatexMath } = await import("../utils/latex-math.js");
+
+  const input = `### Average Treatment Effect (ATE)
+
+\\[
+\\boxed{\\operatorname{ATE}=\\mathbb{E}[Y(1)-Y(0)]}
+\\]
+
+Equivalently, by linearity of expectation:
+
+\\[
+\\boxed{\\operatorname{ATE}=\\mathbb{E}[Y(1)]-\\mathbb{E}[Y(0)]}
+\\]
+
+where \\(Y(1)\\) is the potential outcome under treatment and \\(Y(0)\\) under control.
+
+### Euler's identity
+
+\\[
+\\boxed{e^{i\\pi}+1=0}
+\\]
+
+Code block that should NOT be modified:
+\`\`\`python
+def example():
+    return [x for x in range(10)]
+\`\`\`
+And inline \`array[0]\` code.`;
+
+  const output = normalizeLatexMath(input);
+
+  assert.ok(
+    output.includes("$$\\boxed{\\operatorname{ATE}=\\mathbb{E}[Y(1)-Y(0)]}$$"),
+  );
+  assert.ok(
+    output.includes(
+      "$$\\boxed{\\operatorname{ATE}=\\mathbb{E}[Y(1)]-\\mathbb{E}[Y(0)]}$$",
+    ),
+  );
+  assert.ok(output.includes("$Y(1)$"));
+  assert.ok(output.includes("$Y(0)$"));
+  assert.ok(output.includes("$$\\boxed{e^{i\\pi}+1=0}$$"));
+  assert.ok(output.includes("return [x for x in range(10)]"));
+  assert.ok(output.includes("`array[0]`"));
+});
+
+test("ChatGPTParser formatApiResult normalizes LaTeX math from API response", async () => {
+  const { ChatGPTParser } = await import("../ai/chatgpt.js");
+  const parser = new ChatGPTParser();
+
+  const apiMessages = [
+    {
+      role: "ChatGPT",
+      segments: [
+        {
+          type: "text",
+          content:
+            "Average Treatment Effect:\n\\[\n\\operatorname{ATE}=\\mathbb{E}[Y(1)-Y(0)]\n\\]\nwhere \\(Y(1)\\) is treated.",
+        },
+      ],
+      citeMap: {},
+      imageGroupMap: {},
+    },
+  ];
+
+  const result = parser.formatApiResult({}, apiMessages, "Math Test");
+  assert.equal(result.messages.length, 1);
+  assert.ok(
+    result.messages[0].content.includes(
+      "$$\\operatorname{ATE}=\\mathbb{E}[Y(1)-Y(0)]$$",
+    ),
+  );
+  assert.ok(result.messages[0].content.includes("$Y(1)$"));
+  assert.ok(!result.messages[0].content.includes("\\["));
+  assert.ok(!result.messages[0].content.includes("\\("));
+});

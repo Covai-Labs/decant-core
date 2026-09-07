@@ -1,5 +1,6 @@
 import { ChatParser } from "./base.js";
 import { convertToMarkdown } from "../utils/html-to-markdown.js";
+import { normalizeLatexMath } from "../utils/latex-math.js";
 import {
   collectMountedTurnMessages,
   findChatGPTScrollRoot,
@@ -533,6 +534,8 @@ function cleanMarkdownFromApi(text, citeMap, imageGroupMap) {
       return ` (${formatted.join(", ")})`;
     },
   );
+
+  text = normalizeLatexMath(text);
 
   return text;
 }
