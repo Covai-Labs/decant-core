@@ -716,10 +716,15 @@ export class ChatGPTParser extends ChatParser {
 
     const role = this.getMessageRole(container, roleElement);
     const noiseSelectors = [
-      ".flex.gap-2",
+      ".flex.gap-2:not(.caption-panel):not(.caption-panel *)",
       "button",
       ".sr-only",
       '[role="button"]',
+      ".control-panel",
+      "[data-input-selector-group]",
+      "[data-input-selector-variable]",
+      '[role="slider"]',
+      ".AxvpHG_visualizationLayer",
     ];
     const contentParts = contentElements
       .map((contentElement) => {

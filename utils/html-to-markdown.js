@@ -164,7 +164,7 @@ export function convertToMarkdown(htmlContent, options = {}) {
     // Clone the element to avoid modifying the original
     const clone = htmlContent.cloneNode(true);
 
-    // Convert math equations (KaTeX, data-math, and data-xpm-latex) to standard markdown math blocks
+    // Convert math equations (KaTeX, data-math, data-math-source, and data-xpm-latex) to standard markdown math blocks
     // Use alphanumeric placeholder tokens so Turndown text-escaping engine never corrupts LaTeX
     // 1. Process Gemini-style data-math attributes first (removes child .katex spans so they are not double-processed)
     clone.querySelectorAll("[data-math]").forEach((el) => {
@@ -175,7 +175,24 @@ export function convertToMarkdown(htmlContent, options = {}) {
       registerMath(el, latex, isBlock, clone.ownerDocument);
     });
 
-    // 2. Process Google Search SGE LaTeX images with [data-xpm-latex]
+    // 2. Process ChatGPT data-math-source attributes
+    clone.querySelectorAll("[data-math-source]").forEach((el) => {
+      if (!clone.contains(el)) return;
+      const latex = el.getAttribute("data-math-source");
+      if (!latex) return;
+      const style = el.getAttribute("style") || "";
+      const isBlock =
+        el.classList.contains("katex-display") ||
+        el.querySelector(".katex-display") !== null ||
+        el.classList.contains("math-block") ||
+        el.classList.contains("AxvpHG_mathBlock") ||
+        el.closest?.(".AxvpHG_expandedDisplayContent") !== null ||
+        el.tagName === "DIV" ||
+        /display:\s*block/i.test(style);
+      registerMath(el, latex, isBlock, clone.ownerDocument);
+    });
+
+    // 3. Process Google Search SGE LaTeX images with [data-xpm-latex]
     clone.querySelectorAll("[data-xpm-latex]").forEach((el) => {
       if (!clone.contains(el)) return;
       const copyRoot = el.closest("[data-xpm-copy-root]");
@@ -198,7 +215,7 @@ export function convertToMarkdown(htmlContent, options = {}) {
       registerMath(container, latex, isBlock, clone.ownerDocument);
     });
 
-    // 3. Process block display KaTeX (.katex-display)
+    // 4. Process block display KaTeX (.katex-display)
     clone.querySelectorAll(".katex-display").forEach((el) => {
       if (!clone.contains(el)) return;
       const annotation = el.querySelector(
@@ -206,11 +223,13 @@ export function convertToMarkdown(htmlContent, options = {}) {
       );
       const latex = annotation
         ? annotation.textContent.trim()
-        : el.textContent.trim();
+        : el.getAttribute("data-math-source") ||
+          el.getAttribute("aria-label") ||
+          el.textContent.trim();
       registerMath(el, latex, true, clone.ownerDocument);
     });
 
-    // 4. Process inline KaTeX (.katex)
+    // 5. Process inline KaTeX (.katex)
     clone.querySelectorAll(".katex").forEach((el) => {
       if (!clone.contains(el)) return;
       const annotation = el.querySelector(
@@ -218,7 +237,9 @@ export function convertToMarkdown(htmlContent, options = {}) {
       );
       const latex = annotation
         ? annotation.textContent.trim()
-        : el.textContent.trim();
+        : el.getAttribute("data-math-source") ||
+          el.getAttribute("aria-label") ||
+          el.textContent.trim();
       registerMath(el, latex, false, clone.ownerDocument);
     });
 
@@ -358,6 +379,11 @@ export function convertToMarkdown(htmlContent, options = {}) {
       "aside.L9AUvd",
       "aside.UL0w9b",
       "div.qacuz",
+      ".control-panel",
+      "[data-input-selector-group]",
+      "[data-input-selector-variable]",
+      '[role="slider"]',
+      ".AxvpHG_visualizationLayer",
     ];
 
     noiseSelectors.forEach((selector) => {
