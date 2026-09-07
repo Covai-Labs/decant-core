@@ -1,3 +1,10 @@
+## [1.2.6](https://github.com/Covai-Labs/decant-core/compare/v1.2.5...v1.2.6) (2026-09-07)
+
+
+### Bug Fixes
+
+* **google-search-ai:** preserve data-xpm-latex math equation images when stripping base64 images ([b293769](https://github.com/Covai-Labs/decant-core/commit/b293769df173df2fbd4e38c84aee1dc9a1b87949))
+
 ## [1.2.5](https://github.com/Covai-Labs/decant-core/compare/v1.2.4...v1.2.5) (2026-09-07)
 
 
