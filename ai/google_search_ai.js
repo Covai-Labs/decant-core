@@ -61,6 +61,8 @@ export function sanitizeResponseContainer(container) {
 export function cleanMarkdownSpacing(markdown) {
   if (!markdown) return "";
   return markdown
+    .replace(/(?:google\.)?(?:sn\.)?\\?_setImageSrc\s*\([\s\S]*?\);?/gi, "")
+    .replace(/data:image\/[a-zA-Z0-9+.-]+;base64,[A-Za-z0-9+/=\\]+/gi, "")
     .replace(/[ \t]+$/gm, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();

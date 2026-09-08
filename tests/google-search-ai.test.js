@@ -87,6 +87,18 @@ test("cleanMarkdownSpacing normalizes trailing spaces and collapses multi-line g
   assert.equal(cleaned, "Line 1\n\nLine 2\n\nLine 3");
 });
 
+test("cleanMarkdownSpacing purges leaked sn._setImageSrc and base64 image data", () => {
+  const raw =
+    "Some text before [](https://example.com)sn.\\_setImageSrc('img-123','data:image\\/png;base64,iVBORw0KGgoAAAANSUhEUgAA=='); some text after";
+  const cleaned = cleanMarkdownSpacing(raw);
+  assert.equal(
+    cleaned,
+    "Some text before [](https://example.com) some text after",
+  );
+  assert.doesNotMatch(cleaned, /_setImageSrc/);
+  assert.doesNotMatch(cleaned, /data:image/);
+});
+
 test("sanitizeResponseContainer purges empty <a> tags left behind by stripped base64 images", () => {
   const { document } = parseHTML(
     '<div><a href="/goto?url=https%3A%2F%2Fexample.com"><img src="data:image/png;base64,ABCDEF"></a><a href="https://example.com/keep"><img src="https://example.com/pic.png">Valid</a></div>',
