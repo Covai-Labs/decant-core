@@ -145,7 +145,9 @@ function collectArtifacts(messages) {
           if (a.content.includes(input.old_str)) {
             a.content = a.content.replace(input.old_str, () => input.new_str);
           } else {
-            a.content += (a.content ? "\n\n" : "") + input.new_str;
+            console.warn(
+              `[AI Exporter] Artifact "${a.title || id}": update could not be applied (source text not found).`,
+            );
           }
         }
       } else if (typeof input.content === "string") {
@@ -155,6 +157,7 @@ function collectArtifacts(messages) {
       if (input.title) a.title = input.title;
       if (input.type) a.type = input.type;
       if (input.language) a.language = input.language;
+      a.lastBlock = block;
       if (input.version_uuid) a.lastVersionUuid = input.version_uuid;
     }
   }
@@ -170,6 +173,20 @@ function extractArtifacts(message, foldedArtifacts = new Map()) {
         if (content.name === "artifacts") {
           const id = input.id || "__artifact__";
           const folded = foldedArtifacts.get(id);
+
+          // Only emit at the final edit block for this artifact
+          if (folded && folded.lastBlock && folded.lastBlock !== content) {
+            continue;
+          }
+          if (
+            folded &&
+            folded.lastVersionUuid &&
+            input.version_uuid &&
+            input.version_uuid !== folded.lastVersionUuid
+          ) {
+            continue;
+          }
+
           const title = input.title || (folded && folded.title) || "Artifact";
           const lang =
             input.language ||
@@ -179,18 +196,11 @@ function extractArtifacts(message, foldedArtifacts = new Map()) {
           const code =
             (folded && folded.content) || input.content || input.new_str || "";
           if (code) {
-            // If version_uuid is used, emit only at its final version block
-            if (
-              !folded ||
-              !folded.lastVersionUuid ||
-              input.version_uuid === folded.lastVersionUuid
-            ) {
-              artifacts.push({
-                title,
-                language: lang,
-                content: code.trim(),
-              });
-            }
+            artifacts.push({
+              title,
+              language: lang,
+              content: code.trim(),
+            });
           }
         } else if (content.name === "create_file") {
           let code = "";

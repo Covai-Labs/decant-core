@@ -281,11 +281,101 @@ test("ClaudeParser API handles interactive widget, questionnaire tool use, and a
   );
   assert.ok(claudeMsg1.content.includes("export default function Widget()"));
 
-  // Check folded artifact update
-  const artifactMsg = result.messages.find((m) => m.role === "Claude Artifact");
-  assert.ok(artifactMsg, "Expected Claude Artifact message");
+  // Check folded artifact update emitted exactly once at its final state (no duplicate on create)
+  const artifactMessages = result.messages.filter(
+    (m) => m.role === "Claude Artifact",
+  );
+  assert.equal(
+    artifactMessages.length,
+    1,
+    "Artifact must be emitted exactly once at its final state",
+  );
   assert.ok(
-    artifactMsg.content.includes("const a = 1;\nconst b = 2;"),
+    artifactMessages[0].content.includes("const a = 1;\nconst b = 2;"),
     "Expected folded artifact update",
+  );
+});
+
+test("ClaudeParser API handles unmatched update diff safely without corrupting artifact", async () => {
+  const parser = new ClaudeParser();
+
+  const mockApiData = {
+    name: "Unmatched Diff Chat",
+    model: "claude-3-7-sonnet",
+    current_leaf_message_uuid: "msg-2",
+    chat_messages: [
+      {
+        uuid: "msg-1",
+        sender: "assistant",
+        parent_message_uuid: null,
+        content: [
+          {
+            type: "tool_use",
+            id: "tool-art-1",
+            name: "artifacts",
+            input: {
+              id: "art-safe",
+              title: "Safe Artifact",
+              type: "application/vnd.ant.code",
+              language: "javascript",
+              command: "create",
+              content: "function hello() { return 'world'; }",
+            },
+          },
+        ],
+      },
+      {
+        uuid: "msg-2",
+        sender: "assistant",
+        parent_message_uuid: "msg-1",
+        content: [
+          {
+            type: "tool_use",
+            id: "tool-art-2",
+            name: "artifacts",
+            input: {
+              id: "art-safe",
+              command: "update",
+              old_str: "NON_EXISTENT_STRING",
+              new_str: "CORRUPTED_CODE",
+            },
+          },
+        ],
+      },
+    ],
+  };
+
+  const dom = parseHTML(
+    "<html><head><title>Test</title></head><body></body></html>",
+  );
+  globalThis.document = dom.document;
+  globalThis.window = Object.assign(dom.window, {
+    location: {
+      pathname: "/chat/12345678-1234-1234-1234-123456789abc",
+      href: "https://claude.ai/chat/12345678-1234-1234-1234-123456789abc",
+      origin: "https://claude.ai",
+    },
+  });
+
+  globalThis.fetch = async (url) => {
+    if (url.includes("/chat_conversations/")) {
+      return { ok: true, json: async () => mockApiData };
+    }
+    if (url.includes("/api/organizations")) {
+      return {
+        ok: true,
+        json: async () => [{ uuid: "org-123", capabilities: ["chat"] }],
+      };
+    }
+    return { ok: false, status: 404 };
+  };
+
+  const result = await parser.parse({ parserMode: "api" });
+  const art = result.messages.find((m) => m.role === "Claude Artifact");
+  assert.ok(art);
+  assert.ok(art.content.includes("function hello() { return 'world'; }"));
+  assert.ok(
+    !art.content.includes("CORRUPTED_CODE"),
+    "Unmatched diff must not be appended",
   );
 });
