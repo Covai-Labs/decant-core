@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/Covai-Labs/decant-core/compare/v1.3.0...v1.3.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* **google-search-ai:** purge leaked sn._setImageSrc calls and stray data URIs ([#6](https://github.com/Covai-Labs/decant-core/issues/6)) ([0e250b2](https://github.com/Covai-Labs/decant-core/commit/0e250b2523862ee01f87ca32a909af11da198c61))
+
 # [1.3.0](https://github.com/Covai-Labs/decant-core/compare/v1.2.6...v1.3.0) (2026-09-07)
 
 
