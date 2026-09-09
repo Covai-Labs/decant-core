@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/Covai-Labs/decant-core/compare/v1.3.1...v1.4.0) (2026-09-09)
+
+
+### Features
+
+* **claude:** support interactive elements, widgets, questionnaires, and unrolled carousels ([#7](https://github.com/Covai-Labs/decant-core/issues/7)) ([93baca7](https://github.com/Covai-Labs/decant-core/commit/93baca72364d3fc90eb0bd1a7cd3e78f2d4de594))
+
 ## [1.3.1](https://github.com/Covai-Labs/decant-core/compare/v1.3.0...v1.3.1) (2026-09-09)
 
 
