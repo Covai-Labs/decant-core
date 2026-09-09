@@ -440,8 +440,18 @@ export class ClaudeParser extends ChatParser {
                     for (const q of input.questions) {
                       const qText = q.question || q.text || "";
                       const ans = answers[qText];
-                      qStr += ans
-                        ? `> - **${qText}** — ${ans}\n`
+                      let ansStr = "";
+                      if (typeof ans === "string") {
+                        ansStr = ans;
+                      } else if (Array.isArray(ans)) {
+                        ansStr = ans.join(", ");
+                      } else if (ans && typeof ans === "object") {
+                        ansStr = JSON.stringify(ans);
+                      } else if (ans != null) {
+                        ansStr = String(ans);
+                      }
+                      qStr += ansStr
+                        ? `> - **${qText}** — ${ansStr}\n`
                         : `> - ${qText}\n`;
                     }
                     contentStr += `${qStr}\n`;
@@ -634,7 +644,6 @@ export class ClaudeParser extends ChatParser {
         role = "User";
         const clone = el.cloneNode(true);
         unrollInteractiveElements(clone, el.ownerDocument || document);
-        clone.querySelectorAll("button").forEach((btn) => btn.remove());
         content = convertToMarkdown(clone);
       } else if (
         el.matches(".font-claude-message") ||
@@ -644,7 +653,6 @@ export class ClaudeParser extends ChatParser {
         role = "Claude";
         const clone = el.cloneNode(true);
         unrollInteractiveElements(clone, el.ownerDocument || document);
-        clone.querySelectorAll("button").forEach((btn) => btn.remove());
         content = convertToMarkdown(clone);
       } else if (el.matches(".artifact-block-cell")) {
         role = "Claude Artifact";
