@@ -99,6 +99,28 @@ test("cleanMarkdownSpacing purges leaked sn._setImageSrc and base64 image data",
   assert.doesNotMatch(cleaned, /data:image/);
 });
 
+test("cleanMarkdownSpacing purges google._setImageSrc and standalone escaped data URI", () => {
+  const rawHelper =
+    "Prefix google._setImageSrc('img-456', 'data:image/jpeg;base64,abcdef123456'); Suffix";
+  const cleanedHelper = cleanMarkdownSpacing(rawHelper);
+  assert.equal(cleanedHelper, "Prefix  Suffix");
+  assert.doesNotMatch(cleanedHelper, /google\._setImageSrc/);
+
+  const rawEscapedUri =
+    "Stand-alone escaped URI data:image\\/png;base64,iVBORw0KGgoAAA== remains clean.";
+  const cleanedEscaped = cleanMarkdownSpacing(rawEscapedUri);
+  assert.equal(cleanedEscaped, "Stand-alone escaped URI  remains clean.");
+  assert.doesNotMatch(cleanedEscaped, /data:image/);
+});
+
+test("cleanMarkdownSpacing does not greedily strip response text when _setImageSrc appears in prose", () => {
+  const rawProse =
+    "Discussion of _setImageSrc( in JavaScript documentation.\n\nHere is an explanation of parameters (id and src) that should not be deleted.";
+  const cleanedProse = cleanMarkdownSpacing(rawProse);
+  assert.match(cleanedProse, /Discussion of _setImageSrc\(/);
+  assert.match(cleanedProse, /Here is an explanation of parameters/);
+});
+
 test("sanitizeResponseContainer purges empty <a> tags left behind by stripped base64 images", () => {
   const { document } = parseHTML(
     '<div><a href="/goto?url=https%3A%2F%2Fexample.com"><img src="data:image/png;base64,ABCDEF"></a><a href="https://example.com/keep"><img src="https://example.com/pic.png">Valid</a></div>',
