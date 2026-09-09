@@ -62,7 +62,7 @@ export function cleanMarkdownSpacing(markdown) {
   if (!markdown) return "";
   return markdown
     .replace(
-      /(?:google\.)?(?:sn\.)?\\?_setImageSrc\s*\(\s*['"][^'"]*['"]\s*,\s*['"][^'"]*['"]\s*\);?/gi,
+      /(?:google|sn)\.\\?_setImageSrc\s*\(\s*['"][^'"]*['"]\s*,\s*['"][^'"]*['"]\s*\);?/gi,
       "",
     )
     .replace(
