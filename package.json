@@ -3,6 +3,9 @@
   "version": "1.4.0",
   "description": "Shared AI chat platform parsers and detection for Covai browser extensions.",
   "type": "module",
+  "engines": {
+    "node": ">=26.0.0"
+  },
   "main": "ai/index.js",
   "exports": {
     ".": "./ai/index.js",
