@@ -167,11 +167,11 @@ export class GeminiParser extends ChatParser {
     let cursor = null;
     let pageCount = 0;
 
-    while (pageCount < 50) {
+    while (pageCount < 250) {
       pageCount++;
       const payloadArg = JSON.stringify([
         formattedConvoId,
-        10,
+        100,
         cursor,
         1,
         [0],
@@ -232,12 +232,155 @@ export class GeminiParser extends ChatParser {
     return this.formatApiResult(allItems, currentUrl, options);
   }
 
+  enrichMessagesWithDomAttachments(messages) {
+    try {
+      if (typeof document === "undefined" || !document.querySelectorAll) {
+        return messages;
+      }
+      const parentContainers = document.querySelectorAll(
+        ".conversation-container",
+      );
+      const domTurns = [];
+
+      if (parentContainers.length > 0) {
+        parentContainers.forEach((container, idx) => {
+          const rawId = (container.id || "").replace(/^r_/, "");
+          const fileElements = container.querySelectorAll(
+            "user-query-file-preview, .file-preview, .attachment-preview, [data-testid='file-preview']",
+          );
+          const fileNames = [];
+          fileElements.forEach((fe) => {
+            const name = (fe.textContent || "").trim();
+            if (name && !fileNames.includes(name)) fileNames.push(name);
+          });
+
+          const userQuery = container.querySelector("user-query") || container;
+          const clone = userQuery.cloneNode(true);
+          clone
+            .querySelectorAll(
+              "user-query-file-preview, .file-preview, .attachment-preview, button, .edit-button, model-response",
+            )
+            .forEach((el) => el.remove());
+          const queryText = (
+            clone.innerText !== undefined
+              ? clone.innerText
+              : clone.textContent || ""
+          )
+            .replace(/^You said\s*/i, "")
+            .trim();
+
+          if (fileNames.length > 0) {
+            domTurns.push({
+              turnId: rawId,
+              queryText,
+              domIndex: idx,
+              totalDom: parentContainers.length,
+              fileNames,
+            });
+          }
+        });
+      } else {
+        const userQueries = document.querySelectorAll("user-query");
+        userQueries.forEach((uq, idx) => {
+          const fileElements = uq.querySelectorAll(
+            "user-query-file-preview, .file-preview, .attachment-preview, [data-testid='file-preview']",
+          );
+          const fileNames = [];
+          fileElements.forEach((fe) => {
+            const name = (fe.textContent || "").trim();
+            if (name && !fileNames.includes(name)) fileNames.push(name);
+          });
+
+          const clone = uq.cloneNode(true);
+          clone
+            .querySelectorAll(
+              "user-query-file-preview, .file-preview, .attachment-preview, button, .edit-button",
+            )
+            .forEach((el) => el.remove());
+          const queryText = (
+            clone.innerText !== undefined
+              ? clone.innerText
+              : clone.textContent || ""
+          )
+            .replace(/^You said\s*/i, "")
+            .trim();
+
+          if (fileNames.length > 0) {
+            domTurns.push({
+              domIndex: idx,
+              queryText,
+              totalDom: userQueries.length,
+              fileNames,
+            });
+          }
+        });
+      }
+
+      if (domTurns.length === 0) return messages;
+
+      const userMessages = messages.filter((m) => m.role === "User");
+
+      for (const domTurn of domTurns) {
+        let matchedMsg = null;
+
+        // 1. Match by exact turnId if present
+        if (domTurn.turnId) {
+          matchedMsg = userMessages.find((m) => m.turnId === domTurn.turnId);
+        }
+
+        // 2. Fallback: match by queryText if present and non-empty
+        if (!matchedMsg && domTurn.queryText) {
+          matchedMsg = userMessages.find(
+            (m) =>
+              m.content &&
+              (m.content.includes(domTurn.queryText) ||
+                domTurn.queryText.includes(m.content)),
+          );
+        }
+
+        // 3. Fallback: match by trailing turn ordinal (mounted DOM elements align with latest turns)
+        if (!matchedMsg && typeof domTurn.domIndex === "number") {
+          const offset = userMessages.length - domTurn.totalDom;
+          const targetIndex =
+            offset >= 0 ? offset + domTurn.domIndex : domTurn.domIndex;
+          matchedMsg = userMessages[targetIndex];
+        }
+
+        if (matchedMsg) {
+          const attachBlock =
+            `\n\n**Attachments:**\n` +
+            domTurn.fileNames.map((fn) => `- ${fn}`).join("\n");
+          if (!matchedMsg.content.includes("**Attachments:**")) {
+            matchedMsg.content = matchedMsg.content
+              ? `${matchedMsg.content}${attachBlock}`
+              : `**Attachments:**\n` +
+                domTurn.fileNames.map((fn) => `- ${fn}`).join("\n");
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(
+        "[Gemini Parser] Failed to enrich messages with DOM attachments:",
+        e,
+      );
+    } finally {
+      // Clean internal turnId tracking before returning messages
+      for (const m of messages) {
+        delete m.turnId;
+      }
+    }
+
+    return messages;
+  }
+
   formatApiResult(allItems, currentUrl, options = {}) {
     if (!Array.isArray(allItems) || allItems.length === 0) {
       return null;
     }
 
     const messages = this.convertApiItemsToMessages(allItems, options);
+    this.enrichMessagesWithDomAttachments(messages);
+
     let title = this.extractTitleFromPage();
     if (!title || title === "Gemini Conversation") {
       const firstUserMsg = messages.find((m) => m.role === "User");
@@ -292,17 +435,28 @@ export class GeminiParser extends ChatParser {
     return null;
   }
 
+  extractTurnId(item) {
+    try {
+      const raw = item[0]?.[1] || item[1]?.[1] || "";
+      return String(raw).replace(/^r_/, "");
+    } catch {
+      return "";
+    }
+  }
+
   convertApiItemsToMessages(items, options = {}) {
     const messages = [];
 
     for (const item of items) {
       if (!Array.isArray(item)) continue;
 
+      const turnId = this.extractTurnId(item);
       const userText = this.findUserTextInApiItem(item);
       if (userText) {
         messages.push({
           role: "User",
           content: userText.trim(),
+          turnId,
         });
       }
 
@@ -311,6 +465,7 @@ export class GeminiParser extends ChatParser {
         messages.push({
           role: "Model",
           content: normalizeLatexMath(modelText.trim()),
+          turnId,
         });
       }
     }

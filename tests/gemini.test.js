@@ -95,6 +95,15 @@ test("GeminiParser extracts and reconstructs all 15 turns (30 messages) in chron
     result.messages[29].content,
     /\| Species \| Declared Extinct \|/,
   );
+
+  // Assert internal turnId is deleted on all returned messages
+  for (const m of result.messages) {
+    assert.equal(
+      "turnId" in m,
+      false,
+      "Message should not leak internal turnId",
+    );
+  }
 });
 
 test("GeminiParser parse() executes API flow when convoId and globalData are present", async () => {
@@ -178,4 +187,36 @@ test("GeminiParser parse() respects parserMode: 'dom'", async () => {
   assert.equal(result.metadata.Method, "DOM");
   assert.equal(result.messages.length, 2);
   assert.equal(result.messages[0].content, "Hello DOM");
+});
+
+test("GeminiParser merges live DOM attachment metadata into API result", async () => {
+  const { document, window } = parseHTML(
+    `<html><head><title>Attachment Test</title></head><body>
+      <script>window.WIZ_global_data = {"SNlM0e": "test_at_token", "FdrFJe": "test_fsid"};</script>
+      <div class="conversation-container" id="c70b0f912110c79a">
+        <user-query>
+          <div class="query-text">You cannot evolve out of a clade. But some cunts get offended</div>
+          <user-query-file-preview>phylogeny_tree.pdf</user-query-file-preview>
+          <user-query-file-preview>genetic_markers.csv</user-query-file-preview>
+        </user-query>
+      </div>
+    </body></html>`,
+  );
+  globalThis.document = document;
+  globalThis.window = window;
+  window.location = new URL(`https://gemini.google.com/app/${fixture.convoId}`);
+
+  const parser = new GeminiParser();
+  globalThis.fetch = async () => ({
+    ok: true,
+    text: async () => fixture.page2_raw,
+  });
+
+  const result = await parser.parse();
+  assert.equal(result.metadata.Method, "API");
+  const firstUser = result.messages.find((m) => m.role === "User");
+  assert.ok(firstUser, "First user message exists");
+  assert.match(firstUser.content, /\*\*Attachments:\*\*/);
+  assert.match(firstUser.content, /- phylogeny_tree\.pdf/);
+  assert.match(firstUser.content, /- genetic_markers\.csv/);
 });
