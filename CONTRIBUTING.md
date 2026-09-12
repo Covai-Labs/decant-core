@@ -1,6 +1,6 @@
-# Contributing to @covai/parser-core
+# Contributing to decant-core
 
-Thank you for your interest in contributing to parser-core! We welcome bug reports, feature suggestions, and code contributions.
+Thank you for your interest in contributing to decant-core! We welcome bug reports, feature suggestions, and code contributions.
 
 ## Getting Started
 

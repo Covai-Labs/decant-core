@@ -1,0 +1,51 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description: string;
+  canonicalPath?: string;
+  noindex?: boolean;
+}
+
+const { title, description, canonicalPath = '/', noindex = false } = Astro.props;
+
+const SITE = 'https://covai-labs.github.io';
+const canonical = new URL(
+  `/decant-core${canonicalPath.startsWith('/') ? '' : '/'}${canonicalPath}`,
+  SITE,
+).toString();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex ? (
+      <meta name="robots" content="noindex, nofollow" />
+    ) : (
+      <link rel="canonical" href={canonical} />
+    )}
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:site_name" content="decant-core" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

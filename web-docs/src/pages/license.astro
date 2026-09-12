@@ -1,0 +1,60 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const description = 'Why decant-core is AGPL-3.0, and what that means for your project.';
+---
+
+<BaseLayout title="License — decant-core" description={description} canonicalPath="/license.html">
+  <Header />
+  <main class="page-section shell">
+    <span class="eyebrow">License</span>
+    <h1>
+      The AGPL Open Commons <span style="color: var(--wine)">manifesto</span>.
+    </h1>
+    <p class="lede">
+      <code>decant-core</code> is licensed under the{' '}
+      <strong>GNU Affero General Public License v3.0 (AGPL-3.0-only)</strong>. That choice is not
+      incidental — it is a product decision.
+    </p>
+
+    <h2>Parser infrastructure belongs in a shared commons</h2>
+    <p class="lede">
+      AI platforms change constantly. Every time ChatGPT redecorates a message or Claude changes how
+      artifacts render, somebody has to re-learn the DOM. If each exporter maintains its own private
+      parser stack, a platform update means the same broken logic gets re-debugged dozens of times —
+      and the fixes disappear forever.
+    </p>
+    <p class="lede">
+      decant-core exists to be the opposite: a shared copyleft commons where improvements stay
+      available to the ecosystem instead of being siloed into proprietary forks.
+    </p>
+
+    <h2>What AGPL means for you</h2>
+    <ul style="padding-left: 20px; color: var(--muted)">
+      <li>
+        <strong>Using the library for yourself or your open-source project</strong> — great, and the
+        most common case. Attribution requirements are standard.
+      </li>
+      <li>
+        <strong>Running a modified version as a network service</strong> — you must offer the
+        corresponding source to users of that service. This is the clause that keeps fixes available
+        to the commons even behind a server.
+      </li>
+      <li>
+        <strong>Proprietary, closed-source embedding</strong> — not supported for the core engine,
+        by design. Reach out if you believe you have a case that should be discussed.
+      </li>
+    </ul>
+
+    <h2>Where to see the full terms</h2>
+    <p class="lede">
+      The complete text lives in{' '}
+      <a href="https://github.com/Covai-Labs/decant-core/blob/main/LICENSE">LICENSE</a>. Our natural
+      community is open-source extensions, exporters, archival and research tools, and self-hosted
+      applications — projects that can contribute fixes back to the commons.
+    </p>
+  </main>
+  <Footer />
+</BaseLayout>
