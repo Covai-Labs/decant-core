@@ -23,6 +23,7 @@ export class PerplexityParser extends ChatParser {
 
     // Candidates for User Messages
     const userSelectors = [
+      ".group\\/user-bubble",
       "h1.group\\/query",
       ".group\\/query",
       ".whitespace-pre-line.text-pretty",
@@ -40,37 +41,50 @@ export class PerplexityParser extends ChatParser {
     const elements = threadContainer.querySelectorAll(selectorString);
 
     // Helper to determine role
-    const getRole = (el) => {
+    const isUser = (el) => {
       for (const s of userSelectors) {
-        if (el.matches(s)) return "User";
+        if (el.matches(s)) return true;
       }
-      for (const s of assistantSelectors) {
-        if (el.matches(s)) return "Perplexity";
-      }
-      return "Unknown";
+      return false;
     };
 
-    const seenText = new Set();
+    const isAssistant = (el) => {
+      for (const s of assistantSelectors) {
+        if (el.matches(s)) return true;
+      }
+      return false;
+    };
 
     elements.forEach((el) => {
-      // Perplexity nests things. Avoid duplicates if we selected a parent and a child.
-      // Also avoid "Related" section queries if possible (usually separate container, check parents?)
-
       // Check if inside "related" or "sources"
       if (el.closest('[class*="related"], [class*="sources"]')) return;
 
-      const role = getRole(el);
-      let text = convertToMarkdown(el);
-      text = text.trim();
+      if (isUser(el)) {
+        // Extract timestamp if present in bubble
+        const timeEl = el.querySelector(
+          ".text-tertiary, [class*='text-tertiary']",
+        );
+        const timestamp = timeEl ? timeEl.textContent.trim() : undefined;
 
-      if (!text || seenText.has(text)) return;
+        // Clean user text container
+        const textEl = el.querySelector(".whitespace-pre-line") || el;
+        const text = convertToMarkdown(textEl).trim();
+        if (!text) return;
 
-      // Perplexity specific cleanup
-      // Remove "Sources" label text if it gets captured?
-      // Usually .prose contains the markdown answer.
+        const msgObj = { role: "User", content: text };
+        if (timestamp) {
+          msgObj.timestamp = timestamp;
+        }
+        messages.push(msgObj);
+      } else if (isAssistant(el)) {
+        // Avoid duplicate nested prose
+        if (el.parentElement?.closest(".prose")) return;
 
-      seenText.add(text);
-      messages.push({ role, content: text });
+        const text = convertToMarkdown(el).trim();
+        if (!text) return;
+
+        messages.push({ role: "Perplexity", content: text });
+      }
     });
 
     const currentUrl =
