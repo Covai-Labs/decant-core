@@ -1,5 +1,6 @@
 import { ChatParser } from "./base.js";
 import { convertToMarkdown } from "../utils/html-to-markdown.js";
+import { normalizeLatexMath } from "../utils/latex-math.js";
 
 const GEMINI_RPC_ID = "hNvQHb";
 const DEFAULT_BARD_PATH = "/_/BardChatUi";
@@ -94,23 +95,7 @@ export class GeminiParser extends ChatParser {
 
     const mode = options.parserMode || "auto";
 
-    // 1. Prefer DOM extraction first when on a live page with conversation containers
-    if (typeof document !== "undefined" && document.querySelector) {
-      const hasDomMessages = document.querySelector(
-        ".conversation-container, user-query, model-response, deep-research-immersive-panel",
-      );
-      if (hasDomMessages && mode !== "api") {
-        const domResult = this.parseFromDom(currentUrl, options);
-        if (domResult && domResult.messages && domResult.messages.length > 0) {
-          console.log(
-            `[Gemini Parser] Successfully parsed ${domResult.messages.length} messages from DOM`,
-          );
-          return domResult;
-        }
-      }
-    }
-
-    // 2. Attempt API / RPC extraction if DOM parsing didn't find messages or mode is API
+    // 1. Attempt API / RPC extraction first when not explicitly in 'dom' mode
     if (mode !== "dom" && typeof fetch === "function") {
       try {
         const convoId = this.getConversationId(currentUrl);
@@ -149,7 +134,7 @@ export class GeminiParser extends ChatParser {
       }
     }
 
-    // Fall back to robust DOM parsing
+    // 2. Fall back to robust DOM parsing
     return this.parseFromDom(currentUrl, options);
   }
 
@@ -175,14 +160,17 @@ export class GeminiParser extends ChatParser {
       `&_reqid=${encodeURIComponent(reqId)}` +
       `&rt=c`;
 
+    const formattedConvoId = convoId.startsWith("c_")
+      ? convoId
+      : `c_${convoId}`;
     const allItems = [];
     let cursor = null;
     let pageCount = 0;
 
-    while (pageCount < 50) {
+    while (pageCount < 250) {
       pageCount++;
       const payloadArg = JSON.stringify([
-        `c_${convoId}`,
+        formattedConvoId,
         100,
         cursor,
         1,
@@ -227,11 +215,11 @@ export class GeminiParser extends ChatParser {
       const continueCursor = payload[1] || null;
 
       if (items.length > 0) {
-        // Items are in reverse chronological order from API
+        // Items are in reverse chronological order from API; reverse to maintain oldest-first order
         allItems.unshift(...items.slice().reverse());
       }
 
-      if (!continueCursor || items.length < 100) {
+      if (!continueCursor) {
         break;
       }
       cursor = continueCursor;
@@ -241,7 +229,158 @@ export class GeminiParser extends ChatParser {
       return null;
     }
 
+    return this.formatApiResult(allItems, currentUrl, options);
+  }
+
+  enrichMessagesWithDomAttachments(messages) {
+    try {
+      if (typeof document === "undefined" || !document.querySelectorAll) {
+        return messages;
+      }
+      const parentContainers = document.querySelectorAll(
+        ".conversation-container",
+      );
+      const domTurns = [];
+
+      if (parentContainers.length > 0) {
+        parentContainers.forEach((container, idx) => {
+          const rawId = (container.id || "").replace(/^r_/, "");
+          const fileElements = container.querySelectorAll(
+            "user-query-file-preview, .file-preview, .attachment-preview, [data-testid='file-preview']",
+          );
+          const fileNames = [];
+          fileElements.forEach((fe) => {
+            const name = (fe.textContent || "").trim();
+            if (name && !fileNames.includes(name)) fileNames.push(name);
+          });
+
+          const userQuery = container.querySelector("user-query") || container;
+          const clone = userQuery.cloneNode(true);
+          clone
+            .querySelectorAll(
+              "user-query-file-preview, .file-preview, .attachment-preview, button, .edit-button, model-response",
+            )
+            .forEach((el) => el.remove());
+          const queryText = (
+            clone.innerText !== undefined
+              ? clone.innerText
+              : clone.textContent || ""
+          )
+            .replace(/^You said\s*/i, "")
+            .trim();
+
+          if (fileNames.length > 0) {
+            domTurns.push({
+              turnId: rawId,
+              queryText,
+              domIndex: idx,
+              totalDom: parentContainers.length,
+              fileNames,
+            });
+          }
+        });
+      } else {
+        const userQueries = document.querySelectorAll("user-query");
+        userQueries.forEach((uq, idx) => {
+          const fileElements = uq.querySelectorAll(
+            "user-query-file-preview, .file-preview, .attachment-preview, [data-testid='file-preview']",
+          );
+          const fileNames = [];
+          fileElements.forEach((fe) => {
+            const name = (fe.textContent || "").trim();
+            if (name && !fileNames.includes(name)) fileNames.push(name);
+          });
+
+          const clone = uq.cloneNode(true);
+          clone
+            .querySelectorAll(
+              "user-query-file-preview, .file-preview, .attachment-preview, button, .edit-button",
+            )
+            .forEach((el) => el.remove());
+          const queryText = (
+            clone.innerText !== undefined
+              ? clone.innerText
+              : clone.textContent || ""
+          )
+            .replace(/^You said\s*/i, "")
+            .trim();
+
+          if (fileNames.length > 0) {
+            domTurns.push({
+              domIndex: idx,
+              queryText,
+              totalDom: userQueries.length,
+              fileNames,
+            });
+          }
+        });
+      }
+
+      if (domTurns.length === 0) return messages;
+
+      const userMessages = messages.filter((m) => m.role === "User");
+
+      for (const domTurn of domTurns) {
+        let matchedMsg = null;
+
+        // 1. Match by exact turnId if present
+        if (domTurn.turnId) {
+          matchedMsg = userMessages.find((m) => m.turnId === domTurn.turnId);
+        }
+
+        // 2. Fallback: match by queryText if present and non-empty
+        if (!matchedMsg && domTurn.queryText) {
+          matchedMsg = userMessages.find(
+            (m) =>
+              m.content &&
+              (m.content.includes(domTurn.queryText) ||
+                domTurn.queryText.includes(m.content)),
+          );
+        }
+
+        // 3. Fallback: match by trailing turn ordinal (mounted DOM elements align with latest turns)
+        if (!matchedMsg && typeof domTurn.domIndex === "number") {
+          const offset = userMessages.length - domTurn.totalDom;
+          const targetIndex =
+            offset >= 0 ? offset + domTurn.domIndex : domTurn.domIndex;
+          matchedMsg = userMessages[targetIndex];
+        }
+
+        if (matchedMsg) {
+          const attachBlock =
+            `\n\n**Attachments:**\n` +
+            domTurn.fileNames.map((fn) => `- ${fn}`).join("\n");
+          if (!matchedMsg.content.includes("**Attachments:**")) {
+            matchedMsg.content = matchedMsg.content
+              ? `${matchedMsg.content}${attachBlock}`
+              : `**Attachments:**\n` +
+                domTurn.fileNames.map((fn) => `- ${fn}`).join("\n");
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(
+        "[Gemini Parser] Failed to enrich messages with DOM attachments:",
+        e,
+      );
+    } finally {
+      // Clean internal turnId tracking before returning messages
+      for (const m of messages) {
+        delete m.turnId;
+      }
+    }
+
+    return messages;
+  }
+
+  formatApiResult(allItems, currentUrl, options = {}) {
+    if (!Array.isArray(allItems) || allItems.length === 0) {
+      return null;
+    }
+
     const messages = this.convertApiItemsToMessages(allItems, options);
+    this.enrichMessagesWithDomAttachments(messages);
+
     let title = this.extractTitleFromPage();
     if (!title || title === "Gemini Conversation") {
       const firstUserMsg = messages.find((m) => m.role === "User");
@@ -296,17 +435,28 @@ export class GeminiParser extends ChatParser {
     return null;
   }
 
+  extractTurnId(item) {
+    try {
+      const raw = item[0]?.[1] || item[1]?.[1] || "";
+      return String(raw).replace(/^r_/, "");
+    } catch {
+      return "";
+    }
+  }
+
   convertApiItemsToMessages(items, options = {}) {
     const messages = [];
 
     for (const item of items) {
       if (!Array.isArray(item)) continue;
 
+      const turnId = this.extractTurnId(item);
       const userText = this.findUserTextInApiItem(item);
       if (userText) {
         messages.push({
           role: "User",
           content: userText.trim(),
+          turnId,
         });
       }
 
@@ -314,7 +464,8 @@ export class GeminiParser extends ChatParser {
       if (modelText) {
         messages.push({
           role: "Model",
-          content: modelText.trim(),
+          content: normalizeLatexMath(modelText.trim()),
+          turnId,
         });
       }
     }
@@ -324,6 +475,7 @@ export class GeminiParser extends ChatParser {
 
   findUserTextInApiItem(item) {
     try {
+      if (typeof item[2]?.[0]?.[0] === "string") return item[2][0][0];
       if (typeof item[2]?.[0] === "string") return item[2][0];
       if (typeof item[1]?.[0] === "string" && !Array.isArray(item[1][0]))
         return item[1][0];
@@ -336,6 +488,25 @@ export class GeminiParser extends ChatParser {
 
   findModelTextInApiItem(item) {
     try {
+      // 1. Candidate responses in item[3]
+      if (Array.isArray(item[3])) {
+        const candidates = Array.isArray(item[3][0]) ? item[3][0] : item[3];
+        for (const cand of candidates) {
+          if (!Array.isArray(cand)) continue;
+          // Shape: ["rc_...", ["markdown text", ...], ...]
+          if (Array.isArray(cand[1]) && typeof cand[1][0] === "string") {
+            return cand[1][0];
+          }
+          if (typeof cand[1] === "string") {
+            return cand[1];
+          }
+          if (typeof cand[0] === "string" && cand[0].length > 50) {
+            return cand[0];
+          }
+        }
+      }
+
+      // 2. Fallback candidate in item[1]
       if (Array.isArray(item[1])) {
         const candidate = item[1][0];
         if (typeof candidate === "string") return candidate;
