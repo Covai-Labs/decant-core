@@ -759,6 +759,19 @@ export class ChatGPTParser extends ChatParser {
           }
         });
 
+        clone
+          .querySelectorAll(
+            '[data-testid="webpage-citation-pill"], [data-testid*="citation-pill"]',
+          )
+          .forEach((pill) => {
+            pill.querySelectorAll("img").forEach((img) => img.remove());
+            pill.querySelectorAll("span").forEach((span) => {
+              if (/^\+\d+$/.test(span.textContent.trim())) {
+                span.remove();
+              }
+            });
+          });
+
         noiseSelectors.forEach((selector) => {
           clone.querySelectorAll(selector).forEach((node) => node.remove());
         });
@@ -783,11 +796,13 @@ export class ChatGPTParser extends ChatParser {
   }
 
   extractMountedMessages() {
-    const articles = Array.from(document.querySelectorAll("article"));
+    const turns = getConversationTurns(document);
     const containers =
-      articles.length > 0
-        ? articles
-        : Array.from(document.querySelectorAll("[data-message-author-role]"));
+      turns.length > 0
+        ? turns
+        : Array.from(
+            document.querySelectorAll("article, [data-message-author-role]"),
+          );
 
     return containers
       .map((container) => this.extractMessage(container))
