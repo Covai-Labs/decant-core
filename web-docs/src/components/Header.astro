@@ -1,0 +1,21 @@
+---
+const NAV = [
+  { label: 'Home', href: './index.html' },
+  { label: 'Quickstart', href: './quickstart.html' },
+  { label: 'Platforms', href: './platforms.html' },
+  { label: 'Contributing', href: './contributing.html' },
+  { label: 'License', href: './license.html' },
+];
+---
+
+<header class="site-header">
+  <a href="./index.html" class="brand">
+    <span class="brand-mark">dc</span>
+    <span>decant-core</span>
+  </a>
+  <nav class="site-nav" aria-label="Main navigation">
+    {NAV.map((item) => (
+      <a href={item.href}>{item.label}</a>
+    ))}
+  </nav>
+</header>

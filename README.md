@@ -1,116 +1,167 @@
 # decant-core
 
-Shared AI chat platform parsers and detection logic for [Covai](https://github.com/Covai-Labs) browser extensions.
+**A shared extraction layer for the modern web — including AI conversations.**
 
-This package powers the AI chat extraction features in both [AI Chat Exporter](https://github.com/Covai-Labs/ai-chat-exporter) and [Decant](https://github.com/Covai-Labs/decant).
+[![npm version](https://img.shields.io/npm/v/decant-core?logo=npm&logoColor=white&label=npm&color=cb3837)](https://www.npmjs.com/package/decant-core)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-red.svg)](LICENSE)
+[![GitHub](https://img.shields.io/github/stars/Covai-Labs/decant-core?logo=github&logoColor=white&color=yellow&label=Stars)](https://github.com/Covai-Labs/decant-core/stargazers)
 
-## Supported Platforms
+Every AI chat exporter ends up solving the same problem: extracting conversations from ChatGPT, Claude, Gemini, Perplexity, DeepSeek and other constantly changing AI interfaces.
 
-| Platform            | Parser                    |
-| ------------------- | ------------------------- |
-| ChatGPT             | `ChatGPTParser`           |
-| Claude              | `ClaudeParser`            |
-| Copilot             | `CopilotParser`           |
-| DeepSeek            | `DeepSeekParser`          |
-| Gemini              | `GeminiParser`            |
-| Gemini Cloud Assist | `GeminiCloudAssistParser` |
-| Google AI Studio    | `GoogleAIStudioParser`    |
-| Google Search AI    | `GoogleSearchAIParser`    |
-| Lumo                | `LumoParser`              |
-| Meta AI             | `MetaParser`              |
-| Mistral             | `MistralParser`           |
-| NotebookLM          | `NotebookLMParser`        |
-| Perplexity          | `PerplexityParser`        |
-| Qwen                | `QwenParser`              |
-| Z AI                | `ZAiParser`               |
+And every time one of those platforms changes its UI, seriously re-renders a message, or ships a new feature, **somebody's parser breaks**.
 
-## Installation
+`decant-core` provides reusable parsers, platform detection, and web article extraction so developers don't have to build and maintain the same fragile parsing layer over and over again.
 
 ```bash
 npm install decant-core
 ```
 
-For local development:
+Use it as the parsing layer underneath your own:
 
-```bash
-npm install decant-core@file:../parser-core
-```
+- chat exporters
+- browser extensions
+- web clippers
+- research & data-extraction tools
+- content archivers
+- knowledge-management and PKM applications
 
-## Usage
+**Fix platform parsing once, and let the ecosystem benefit from the fix.**
+
+---
+
+## Why decant-core?
+
+AI platforms don't expose stable public APIs for reading conversation history. No matter what you build, to extract a ChatGPT thread you need to walk the DOM, read internal RPC payloads, or traverse React component trees — and redo it when the frontend changes.
+
+Maintaining that per-platform logic in every exporter is wasteful and fragile. `decant-core` centralizes it:
+
+- ✅ **17 AI chat platform parsers** with normalized output — you get structured messages, models, metadata and Markdown, not DOM soup.
+- ✅ **Web article extraction** — Mozilla Readability, Defuddle, and Article-Extractor run in parallel and arbitrate by content-quality scoring.
+- ✅ **Detection utilities** — tell an "AI chat page" apart from a "regular web page" before you decide which parser to run.
+- ✅ **Math & Markdown handling** — LaTeX normalization plus GFM tables/code fencing that survive round-trips into Obsidian, Logseq and Notion.
+
+The payoff is maintenance: **when a platform changes, the fix happens once, in one place**, instead of being independently reimplemented across dozens of projects.
+
+---
+
+## Quickstart
+
+### 1. Extract an AI conversation
 
 ```js
-import { detectPlatform, parsers, isAiChatUrl } from "decant-core";
+import { detectPlatform, isAiChatUrl } from "decant-core";
 
-// Check if a URL is an AI chat platform
 if (isAiChatUrl(window.location.href)) {
-  const platform = detectPlatform(window.location.href);
-  const ParserClass = parsers.find((p) => p.platform === platform);
+  const { platform, parser } = detectPlatform(window.location.href);
 
-  if (ParserClass) {
-    const parser = new ParserClass();
-    if (parser.canParse(window.location.href)) {
-      const result = parser.parse();
-      // result.title, result.messages, result.model, etc.
-    }
+  if (parser && parser.isAvailable(window.location.href)) {
+    const result = await parser.parse();
+    // result.title
+    // result.messages  -> [{ role: 'User' | 'Assistant', content, ... }]
+    // result.model
+    // result.metadata  -> platform-specific extras
   }
 }
+```
+
+### 2. Extract a regular web article
+
+```js
+import { extractArticle } from "decant-core";
+
+const article = await extractArticle(document /* or an HTML string */, {
+  url: window.location.href,
+});
+
+// article.title, article.author, article.published
+// article.markdown       -> clean, ready-to-use Markdown
+// article.content        -> the body without the title prefix
+// article.engine         -> 'readability' | 'defuddle' | 'raw'
+```
+
+### 3. Detection
+
+```js
+import { detectPlatform, isAiChatUrl, AI_CHAT_DOMAINS } from "decant-core";
+
+isAiChatUrl("https://chatgpt.com/c/abc-123"); // -> true
+const detected = detectPlatform(url); // -> { type: 'ai-chat', platform: 'ChatGPT', parser }
 ```
 
 ### Subpath imports
 
 ```js
-// Individual parser
-import { ChatGPTParser } from "decant-core";
+// Individual parsers (tree-shake the rest)
+import { ChatGPTParser } from "decant-core/ai/chatgpt";
+import { ClaudeParser } from "decant-core/ai/claude";
+import { GeminiParser } from "decant-core/ai/gemini";
 
-// Detection helpers
-import { detectPlatform, isAiChatUrl, AI_CHAT_DOMAINS } from "decant-core";
+// Web & article extraction
+import { extractArticle, ArticleParser, scoreContent } from "decant-core";
+
+// Detection
+import { detectPlatform, isAiChatUrl, parsers } from "decant-core";
 
 // Utilities
 import { convertToMarkdown, cleanMarkdown } from "decant-core";
+import { normalizeLatexMath } from "decant-core";
 ```
 
-## Project Structure
+---
 
-```
-parser-core/
-  ai/                          # Parser classes
-    base.js                    # Base parser class
-    chatgpt.js                 # ChatGPT parser + linearize
-    chatgpt_helper.js          # Injected helper for ChatGPT scroll collection
-    chatgpt_scroll_collector.js # Scroll/dedup logic for ChatGPT
-    claude.js                  # Claude parser (DOM + API)
-    claude_react_reader.js     # Injected helper for Claude React tree
-    copilot.js                 # Copilot parser (multi-domain)
-    deepseek.js                # DeepSeek parser (DOM + API)
-    gemini.js                  # Gemini parser
-    gemini_cloud_assist.js     # Gemini Cloud Assist parser
-    google_ai_studio.js        # Google AI Studio parser
-    google_search_ai.js        # Google Search AI / SGE parser
-    index.js                   # Barrel export
-    lumo.js                    # Lumo parser
-    meta.js                    # Meta AI parser
-    mistral.js                 # Mistral parser
-    notebooklm.js              # NotebookLM parser
-    perplexity.js              # Perplexity parser
-    qwen.js                    # Qwen parser
-    z_ai.js                    # Z AI parser
-  detection/                   # Platform detection
-    detect-platform.js         # detectPlatform(), isAiChatUrl(), parsers[]
-    domains.js                 # AI_CHAT_DOMAINS, URL_PATTERNS
-  lib/                         # Vendored libraries
-    turndown.js                # Turndown HTML→Markdown converter
-  utils/                       # Utilities
-    html-to-markdown.js        # AI-specific Turndown rules
-```
+## Supported Platforms
+
+| Platform                            | Parser                    | Extraction strategy                        |
+| :---------------------------------- | :------------------------ | :----------------------------------------- |
+| **ChatGPT**                         | `ChatGPTParser`           | DOM + internal API                         |
+| **Claude**                          | `ClaudeParser`            | DOM + internal API + React fiber           |
+| **Google Gemini**                   | `GeminiParser`            | DOM + batchexecute RPC                     |
+| **Microsoft Copilot**               | `CopilotParser`           | DOM (multi-domain)                         |
+| **Perplexity**                      | `PerplexityParser`        | Internal API + DOM fallback                |
+| **DeepSeek**                        | `DeepSeekParser`          | DOM + internal API                         |
+| **Qwen**                            | `QwenParser`              | DOM                                        |
+| **Meta AI**                         | `MetaParser`              | DOM                                        |
+| **Mistral / Le Chat**               | `MistralParser`           | DOM                                        |
+| **Proton Lumo**                     | `LumoParser`              | DOM                                        |
+| **Z.ai**                            | `ZAiParser`               | DOM                                        |
+| **Google AI Studio**                | `GoogleAIStudioParser`    | DOM                                        |
+| **NotebookLM**                      | `NotebookLMParser`        | DOM                                        |
+| **Google Search AI (AI Overviews)** | `GoogleSearchAIParser`    | DOM                                        |
+| **Gemini Cloud Assist**             | `GeminiCloudAssistParser` | DOM                                        |
+| **Joyland**                         | `JoylandParser`           | DOM                                        |
+| **Chub**                            | `ChubParser`              | DOM                                        |
+| **Generic Web Article**             | `ArticleParser`           | Readability + Defuddle + Article-Extractor |
+
+All parsers extend the base [`ChatParser`](ai/base.js) interface, so they share a consistent contract — `isAvailable(url)` and a normalized `parse()` result. `ArticleParser`'s `isAvailable(...)` returns true for any http(s) URL.
+
+> **A note on maintenance:** "DOM" here means the parser is resilient against layout changes (it targets semantic structure, not pixel positions). "Internal API" parsers read the same RPC payloads the frontend uses, which keeps working even when the CSS is redecorated. When a platform changes, one shared fix heals every exporter built on `decant-core`.
+
+---
+
+## License
+
+`decant-core` is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0-only)**.
+
+That choice is deliberate. AI platforms change constantly, and parser fixes belong in a shared commons so the whole ecosystem benefits — not siloed in a proprietary fork. If you use `decant-core`, network-based deployments that serve modified versions must also offer the corresponding source. Please review [`LICENSE`](LICENSE) before incorporating it into your project.
+
+---
+
+## Used by
+
+- [AI Chat Exporter](https://github.com/Covai-Labs/ai-chat-exporter) — export, archive and transfer AI conversations between platforms.
+- [Decant](https://github.com/Covai-Labs/decant) — the distraction-free web clipper and research batcher.
+
+These products are demonstrations of the library, not its purpose. Yours can be next — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
 
 ## Development
 
 ```bash
 npm install
-npm run lint
-npm run format:check
+npm run test       # node --test
+npm run lint       # ESLint
+npm run format:check   # Prettier
 ```
 
-## License
-
-[AGPL-3.0](LICENSE)
+When an AI interface changes or you want to add a new platform, read [CONTRIBUTING.md](CONTRIBUTING.md) first — it covers the parser pattern, detection registration, and test fixtures.

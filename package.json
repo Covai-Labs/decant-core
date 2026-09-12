@@ -1,7 +1,7 @@
 {
   "name": "decant-core",
   "version": "1.6.0",
-  "description": "Shared AI chat platform parsers and detection for Covai browser extensions.",
+  "description": "A shared web extraction layer for AI conversations and regular web pages.",
   "type": "module",
   "engines": {
     "node": ">=26.0.0"
@@ -47,7 +47,14 @@
     "gemini",
     "deepseek",
     "copilot",
-    "browser-extension"
+    "perplexity",
+    "web-clipper",
+    "extraction",
+    "markdown",
+    "readability",
+    "turndown",
+    "browser-extension",
+    "scraping"
   ],
   "author": "deadrat-in",
   "license": "AGPL-3.0-only",
