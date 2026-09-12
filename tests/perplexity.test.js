@@ -39,32 +39,33 @@ test("PerplexityParser extracts multi-turn conversation, user timestamps, and ma
     (m) => m.role === "Perplexity",
   );
 
-  assert.ok(
-    userMessages.length >= 6,
-    `Expected at least 6 user messages, got ${userMessages.length}`,
-  );
-  assert.ok(
-    assistantMessages.length >= 7,
-    `Expected at least 7 assistant messages, got ${assistantMessages.length}`,
-  );
+  assert.equal(result.messages.length, 17);
+  assert.equal(userMessages.length, 8);
+  assert.equal(assistantMessages.length, 9);
 
-  // First user message verification
+  // First user message verification (Turn 1)
   const firstUser = userMessages[0];
-  assert.equal(firstUser.timestamp, "11:21 AM");
+  assert.equal(firstUser.timestamp, "11:08 AM");
   assert.ok(
-    firstUser.content.includes(
-      "Why does the RSS claim that they are indigenous to India",
-    ),
-    "Expected prompt text to match",
+    firstUser.content.includes("Tell me why open source software matters"),
+    "Expected prompt text to match Turn 1",
   );
   // Ensure buttons were not leaked into prompt text
   assert.equal(firstUser.content.includes("Edit query"), false);
   assert.equal(firstUser.content.includes("Copy query"), false);
-  assert.equal(firstUser.content.endsWith("11:21 AM"), false);
+  assert.equal(firstUser.content.endsWith("11:08 AM"), false);
+
+  // Turn 2 verification
+  const secondUser = userMessages[1];
+  assert.equal(secondUser.timestamp, "11:09 AM");
+  assert.ok(
+    secondUser.content.includes("cynical version"),
+    "Expected prompt text to match Turn 2",
+  );
 
   // Subsequent user messages have timestamps
-  assert.equal(userMessages[1].timestamp, "11:33 AM");
-  assert.equal(userMessages[2].timestamp, "11:35 AM");
+  assert.equal(userMessages[2].timestamp, "11:21 AM");
+  assert.equal(userMessages[3].timestamp, "11:33 AM");
 
   // Verify math extraction in Euler identity response
   const eulerMessage = assistantMessages.find(

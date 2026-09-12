@@ -77,8 +77,10 @@ export class PerplexityParser extends ChatParser {
         }
         messages.push(msgObj);
       } else if (isAssistant(el)) {
-        // Avoid duplicate nested prose
-        if (el.parentElement?.closest(".prose")) return;
+        // Avoid duplicate nested assistant containers (e.g. .prose inside div[id^="markdown-content-"])
+        if (el.parentElement?.closest('div[id^="markdown-content-"], .prose')) {
+          return;
+        }
 
         const text = convertToMarkdown(el).trim();
         if (!text) return;
