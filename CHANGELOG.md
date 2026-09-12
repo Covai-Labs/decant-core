@@ -1,3 +1,17 @@
+# [1.5.0](https://github.com/Covai-Labs/decant-core/compare/v1.4.0...v1.5.0) (2026-09-12)
+
+
+### Bug Fixes
+
+* **chatgpt:** clean DOM webpage citation pills and support modern turn containers ([f24f481](https://github.com/Covai-Labs/decant-core/commit/f24f481a0359ecd9c52aae9abefbc33dabeb1894))
+* **perplexity:** resolve account ID for authenticated thread API requests ([8aaa754](https://github.com/Covai-Labs/decant-core/commit/8aaa754a917cca4ae9eab6a3bc6fe010ca0dee17))
+* **perplexity:** support modern user bubbles and extract message timestamps ([3451e18](https://github.com/Covai-Labs/decant-core/commit/3451e188b43c2cdc171a7558a1adffbbf80cec8c))
+
+
+### Features
+
+* **perplexity:** add REST API thread extraction with DOM fallback ([720b4ed](https://github.com/Covai-Labs/decant-core/commit/720b4ed539af4b3616d36a2127dbf2c5ce9fab74))
+
 # [1.4.0](https://github.com/Covai-Labs/decant-core/compare/v1.3.1...v1.4.0) (2026-09-09)
 
 
