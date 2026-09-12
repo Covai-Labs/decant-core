@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { parseHTML } from "linkedom";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Setup global DOM for linkedom environment
 const { window, document, HTMLElement, Node, DOMParser } =
@@ -99,4 +102,61 @@ test("ChatGPT interactive learning block converts cleanly without slider or cont
     !extracted.content.includes("Give feedback"),
     "Should strip feedback button",
   );
+});
+
+test("ChatGPT DOM parser extracts modern conversation-turn sections and cleans citation pills", async () => {
+  const fixturePath = path.join(__dirname, "fixtures", "chatgpt-chat.html");
+  if (!fs.existsSync(fixturePath)) return;
+
+  const html = fs.readFileSync(fixturePath, "utf-8");
+  const { document: doc, window: win } = parseHTML(html);
+
+  const prevDoc = global.document;
+  const prevWin = global.window;
+  global.document = doc;
+  global.window = win;
+  global.window.location = {
+    href: "https://chatgpt.com/c/6aa5084e-8044-83ee-afae-30b5e40b0e06",
+  };
+
+  try {
+    const parser = new ChatGPTParser();
+    const result = await parser.parse({ parserMode: "prefer_dom" });
+
+    assert.equal(result.metadata.Method, "DOM");
+    assert.equal(result.messages.length, 5);
+
+    // Turn 27 (first user turn in fixture)
+    assert.equal(result.messages[1].role, "User");
+    assert.ok(
+      result.messages[1].content.includes(
+        "Give a table with some of the species that went extinct recently",
+      ),
+    );
+
+    // Turn 28 (table assistant turn)
+    const tableMsg = result.messages[2];
+    assert.equal(tableMsg.role, "ChatGPT");
+    assert.ok(tableMsg.content.includes("| Species | Extinct |"));
+    assert.ok(tableMsg.content.includes("Steller's sea cow"));
+
+    // Citation pill should be a clean markdown link without favicon images or "+1"
+    assert.ok(
+      tableMsg.content.includes(
+        "[Natural History Museum](https://www.nhm.ac.uk/discover/stellers-sea-cow-first-historical-extinction-of-marine-mammal-at-human-hands.html?utm_source=chatgpt.com)",
+      ),
+      "Citation pill must render as clean [Natural History Museum](url) without favicon or +1 badge",
+    );
+    assert.ok(
+      !tableMsg.content.includes("favicons?domain"),
+      "Favicon image URLs must be stripped from citation pills",
+    );
+    assert.ok(
+      !tableMsg.content.includes("Natural History Museum+1"),
+      "Counter badges (+1) must not be attached to site name",
+    );
+  } finally {
+    global.document = prevDoc;
+    global.window = prevWin;
+  }
 });
