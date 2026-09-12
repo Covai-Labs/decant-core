@@ -1,3 +1,11 @@
+# [1.6.0](https://github.com/Covai-Labs/decant-core/compare/v1.5.0...v1.6.0) (2026-09-12)
+
+
+### Features
+
+* **gemini:** add batchexecute RPC pagination and resilient candidate extraction with DOM fallback ([5f09682](https://github.com/Covai-Labs/decant-core/commit/5f096828cabf9cafd221a7563938c2271e65b0b9))
+* **gemini:** enrich API messages with DOM attachments and add test coverage ([0365bb9](https://github.com/Covai-Labs/decant-core/commit/0365bb9e8980b879e82c351df3720a848c8973da))
+
 # [1.5.0](https://github.com/Covai-Labs/decant-core/compare/v1.4.0...v1.5.0) (2026-09-12)
 
 
