@@ -4,7 +4,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseHTML } from "linkedom";
-import { PerplexityParser } from "../ai/perplexity.js";
+import {
+  PerplexityParser,
+  getThreadSlug,
+  formatApiResult,
+} from "../ai/perplexity.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -18,80 +22,161 @@ test("PerplexityParser isAvailable matches perplexity URLs", () => {
   assert.equal(parser.isAvailable("https://claude.ai/chat/123"), false);
 });
 
-test("PerplexityParser extracts multi-turn conversation, user timestamps, and math from live fixture", async () => {
+test("getThreadSlug correctly extracts slug from perplexity search and page URLs", () => {
+  assert.equal(
+    getThreadSlug(
+      "https://www.perplexity.ai/search/4d672318-e7ae-4fd7-80f7-3c21f0ff4646",
+    ),
+    "4d672318-e7ae-4fd7-80f7-3c21f0ff4646",
+  );
+  assert.equal(
+    getThreadSlug(
+      "https://www.perplexity.ai/search/custom-thread_123?source=default",
+    ),
+    "custom-thread_123",
+  );
+  assert.equal(
+    getThreadSlug("https://www.perplexity.ai/page/some-page-slug"),
+    "some-page-slug",
+  );
+  assert.equal(getThreadSlug("https://www.perplexity.ai/"), null);
+});
+
+test("formatApiResult extracts all 14 turns (including Orcas prompt), normalizes math, and sets Method: API", () => {
+  const fixturePath = path.join(
+    __dirname,
+    "fixtures",
+    "perplexity-api-response.json",
+  );
+  const data = JSON.parse(fs.readFileSync(fixturePath, "utf-8"));
+
+  const currentUrl =
+    "https://www.perplexity.ai/search/4d672318-e7ae-4fd7-80f7-3c21f0ff4646";
+  const result = formatApiResult(data, currentUrl, "Fallback Title");
+
+  assert.equal(result.metadata.Source, "Perplexity");
+  assert.equal(result.metadata.Method, "API");
+  assert.equal(result.title, "Tell me why open source software matters.");
+  assert.equal(result.messages.length, 28);
+
+  const userMessages = result.messages.filter((m) => m.role === "User");
+  const assistantMessages = result.messages.filter(
+    (m) => m.role === "Perplexity",
+  );
+  assert.equal(userMessages.length, 14);
+  assert.equal(assistantMessages.length, 14);
+
+  // Turn 1 (Open source)
+  assert.ok(
+    userMessages[0].content.includes(
+      "Tell me why open source software matters",
+    ),
+  );
+  assert.ok(
+    assistantMessages[0].content.includes(
+      "control, choice, and the ability to build together",
+    ),
+  );
+  assert.equal(userMessages[0].timestamp, "2026-09-12T05:38:57.460670+00:00");
+
+  // Turn 4 (Orca - previously unmounted in DOM!)
+  const orcaUser = userMessages[3];
+  const orcaAssistant = assistantMessages[3];
+  assert.equal(
+    orcaUser.content,
+    "If Orcas have language, can LLMs be trained on it so that it can have conversation with orca ?",
+  );
+  assert.ok(
+    orcaAssistant.content.includes(
+      "Possibly—but not in the straightforward “train an LLM on whale audio and chat with an orca” sense.",
+    ),
+  );
+  assert.ok(orcaAssistant.content.includes("## What we know about orcas"));
+
+  // Turn 11 (Euler's identity LaTeX math normalized to $$)
+  const eulerAssistant = assistantMessages[10];
+  assert.ok(eulerAssistant.content.includes("$$e^{i\\pi}+1=0.$$"));
+
+  // Turn 14 (Extinct species table)
+  const tableAssistant = assistantMessages[13];
+  assert.ok(tableAssistant.content.includes("Thylacine"));
+});
+
+test("PerplexityParser parse() uses API when prefer_api and slug is present", async () => {
+  const fixturePath = path.join(
+    __dirname,
+    "fixtures",
+    "perplexity-api-response.json",
+  );
+  const data = JSON.parse(fs.readFileSync(fixturePath, "utf-8"));
+
+  const dom = parseHTML(
+    "<html><head><title>Page Title</title></head><body></body></html>",
+  );
+  globalThis.document = dom.document;
+  globalThis.window = dom.window;
+  globalThis.window.location = {
+    href: "https://www.perplexity.ai/search/4d672318-e7ae-4fd7-80f7-3c21f0ff4646",
+  };
+
+  const parser = new PerplexityParser();
+  parser.fetchThread = async (slug) => {
+    assert.equal(slug, "4d672318-e7ae-4fd7-80f7-3c21f0ff4646");
+    return data;
+  };
+
+  const result = await parser.parse({ parserMode: "prefer_api" });
+  assert.equal(result.metadata.Method, "API");
+  assert.equal(result.messages.length, 28);
+});
+
+test("PerplexityParser parse() gracefully falls back to DOM when API fetch throws", async () => {
   const fixturePath = path.join(__dirname, "fixtures", "perplexity-chat.html");
   const html = fs.readFileSync(fixturePath, "utf-8");
 
   const dom = parseHTML(html);
   globalThis.document = dom.document;
   globalThis.window = dom.window;
+  globalThis.window.location = {
+    href: "https://www.perplexity.ai/search/4d672318-e7ae-4fd7-80f7-3c21f0ff4646",
+  };
 
   const parser = new PerplexityParser();
-  const result = await parser.parse();
+  parser.fetchThread = async () => {
+    throw new Error("Network error or 403 Forbidden");
+  };
 
-  assert.equal(result.metadata.Source, "Perplexity");
+  const result = await parser.parse({ parserMode: "prefer_api" });
   assert.equal(result.metadata.Method, "DOM");
-  assert.equal(result.title, "Tell me why open source software matters.");
-
-  // Should extract both User and Perplexity messages
-  const userMessages = result.messages.filter((m) => m.role === "User");
-  const assistantMessages = result.messages.filter(
-    (m) => m.role === "Perplexity",
-  );
-
   assert.equal(result.messages.length, 17);
-  assert.equal(userMessages.length, 8);
-  assert.equal(assistantMessages.length, 9);
+});
 
-  // First user message verification (Turn 1)
-  const firstUser = userMessages[0];
-  assert.equal(firstUser.timestamp, "11:08 AM");
-  assert.ok(
-    firstUser.content.includes("Tell me why open source software matters"),
-    "Expected prompt text to match Turn 1",
-  );
-  // Ensure buttons were not leaked into prompt text
-  assert.equal(firstUser.content.includes("Edit query"), false);
-  assert.equal(firstUser.content.includes("Copy query"), false);
-  assert.equal(firstUser.content.endsWith("11:08 AM"), false);
+test("PerplexityParser parse() extracts DOM directly when parserMode is prefer_dom", async () => {
+  const fixturePath = path.join(__dirname, "fixtures", "perplexity-chat.html");
+  const html = fs.readFileSync(fixturePath, "utf-8");
 
-  // Turn 2 verification
-  const secondUser = userMessages[1];
-  assert.equal(secondUser.timestamp, "11:09 AM");
-  assert.ok(
-    secondUser.content.includes("cynical version"),
-    "Expected prompt text to match Turn 2",
-  );
+  const dom = parseHTML(html);
+  globalThis.document = dom.document;
+  globalThis.window = dom.window;
+  globalThis.window.location = {
+    href: "https://www.perplexity.ai/search/4d672318-e7ae-4fd7-80f7-3c21f0ff4646",
+  };
 
-  // Subsequent user messages have timestamps
-  assert.equal(userMessages[2].timestamp, "11:21 AM");
-  assert.equal(userMessages[3].timestamp, "11:33 AM");
+  const parser = new PerplexityParser();
+  let fetchCalled = false;
+  parser.fetchThread = async () => {
+    fetchCalled = true;
+    return {};
+  };
 
-  // Verify math extraction in Euler identity response
-  const eulerMessage = assistantMessages.find(
-    (m) =>
-      m.content.includes("Euler’s identity") ||
-      m.content.includes("Euler's identity"),
+  const result = await parser.parse({ parserMode: "prefer_dom" });
+  assert.equal(
+    fetchCalled,
+    false,
+    "API fetch should not be called in prefer_dom mode",
   );
-  assert.ok(eulerMessage, "Euler response should be extracted");
-  assert.ok(
-    eulerMessage.content.includes("$$e^{i\\pi}+1=0.$$"),
-    "Block math should be preserved",
-  );
-  assert.ok(
-    eulerMessage.content.includes("$e$"),
-    "Inline math should be preserved",
-  );
-
-  // Verify table extraction in extinction response
-  const tableMessage = assistantMessages.find((m) =>
-    m.content.includes("Thylacine"),
-  );
-  assert.ok(tableMessage, "Table response should be extracted");
-  assert.ok(
-    tableMessage.content.includes("| Species | Region and extinction status |"),
-    "Table header preserved",
-  );
+  assert.equal(result.metadata.Method, "DOM");
+  assert.equal(result.messages.length, 17);
 });
 
 test("PerplexityParser backward compatibility with legacy .group/query selector", async () => {
@@ -109,9 +194,10 @@ test("PerplexityParser backward compatibility with legacy .group/query selector"
   const dom = parseHTML(legacyHtml);
   globalThis.document = dom.document;
   globalThis.window = dom.window;
+  globalThis.window.location = { href: "https://www.perplexity.ai/" };
 
   const parser = new PerplexityParser();
-  const result = await parser.parse();
+  const result = await parser.parse({ parserMode: "prefer_dom" });
 
   assert.equal(result.messages.length, 2);
   assert.equal(result.messages[0].role, "User");

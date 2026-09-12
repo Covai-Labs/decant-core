@@ -1,5 +1,116 @@
 import { ChatParser } from "./base.js";
 import { convertToMarkdown } from "../utils/html-to-markdown.js";
+import { normalizeLatexMath } from "../utils/latex-math.js";
+
+export function getThreadSlug(url) {
+  if (!url || typeof url !== "string") return null;
+  const match = url.match(/\/search\/([a-zA-Z0-9_-]+)/);
+  if (match) return match[1];
+  const matchPage = url.match(/\/page\/([a-zA-Z0-9_-]+)/);
+  if (matchPage) return matchPage[1];
+  return null;
+}
+
+export function extractAssistantAnswer(entry) {
+  if (!entry) return "";
+  // 1. Check blocks -> plan_block.goals for markdown answer
+  if (Array.isArray(entry.blocks)) {
+    for (const b of entry.blocks) {
+      if (b.intended_usage === "plan" && b.plan_block?.goals) {
+        for (const g of b.plan_block.goals) {
+          if (g.description && g.description.length > 100) {
+            return g.description.trim();
+          }
+        }
+      }
+      if (b.answer_block?.answer) {
+        return b.answer_block.answer.trim();
+      }
+      if (b.markdown_block?.markdown) {
+        return b.markdown_block.markdown.trim();
+      }
+    }
+  }
+  // 2. Check direct answer or text fields
+  if (entry.answer && typeof entry.answer === "string") {
+    return entry.answer.trim();
+  }
+  if (entry.text && typeof entry.text === "string") {
+    try {
+      const parsed = JSON.parse(entry.text);
+      if (parsed.answer) return parsed.answer.trim();
+    } catch {
+      return entry.text.trim();
+    }
+  }
+  return "";
+}
+
+export function formatApiResult(threadData, currentUrl, fallbackTitle) {
+  const title =
+    threadData.thread_title ||
+    threadData.first_entry?.query_str ||
+    fallbackTitle ||
+    "Perplexity Search";
+
+  const allEntries = [];
+  if (threadData.first_entry) {
+    allEntries.push(threadData.first_entry);
+  }
+  if (Array.isArray(threadData.entries)) {
+    allEntries.push(...threadData.entries);
+  }
+  if (threadData.latest_entry) {
+    allEntries.push(threadData.latest_entry);
+  }
+
+  // Deduplicate entries by uuid / backend_uuid
+  const seenUuids = new Set();
+  const uniqueEntries = [];
+  for (const entry of allEntries) {
+    const id = entry.uuid || entry.backend_uuid || entry.query_str;
+    if (id && !seenUuids.has(id)) {
+      seenUuids.add(id);
+      uniqueEntries.push(entry);
+    }
+  }
+
+  const messages = [];
+  for (const entry of uniqueEntries) {
+    const prompt = (entry.query_str || "").trim();
+    const timestamp =
+      entry.entry_created_datetime || entry.updated_datetime || undefined;
+
+    if (prompt) {
+      const userMsg = { role: "User", content: prompt };
+      if (timestamp) userMsg.timestamp = timestamp;
+      messages.push(userMsg);
+    }
+
+    const rawAnswer = extractAssistantAnswer(entry);
+    if (rawAnswer) {
+      const normalizedAnswer = normalizeLatexMath(rawAnswer);
+      const assistantMsg = { role: "Perplexity", content: normalizedAnswer };
+      if (timestamp) assistantMsg.timestamp = timestamp;
+      messages.push(assistantMsg);
+    }
+  }
+
+  const effectiveUrl =
+    currentUrl ||
+    (threadData.first_entry?.thread_url_slug
+      ? `https://www.perplexity.ai/search/${threadData.first_entry.thread_url_slug}`
+      : "");
+
+  const metadata = {
+    Source: "Perplexity",
+    Date: new Date().toLocaleString(),
+    Link: effectiveUrl,
+    Method: "API",
+  };
+
+  return { title, messages, url: effectiveUrl, metadata };
+}
 
 export class PerplexityParser extends ChatParser {
   name = "Perplexity";
@@ -7,7 +118,30 @@ export class PerplexityParser extends ChatParser {
     return url.includes("perplexity.ai");
   }
 
-  async parse() {
+  async fetchThread(slug) {
+    const url = `https://www.perplexity.ai/rest/thread/${slug}?with_parent_info=true&with_schematized_response=true&version=2.18&source=default&limit=100&offset=0&from_first=true`;
+    const response = await fetch(url, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    if (!response.ok) {
+      throw new Error(
+        `Perplexity API request failed with status ${response.status}`,
+      );
+    }
+    return response.json();
+  }
+
+  async parse(options = {}) {
+    const parserMode = options.parserMode || "prefer_api";
+    const currentUrl =
+      typeof window !== "undefined" && window.location
+        ? window.location.href || ""
+        : "";
+
     const rawTitle =
       document.querySelector(".share-title-section h1")?.textContent ||
       document.querySelector("h1")?.textContent ||
@@ -15,6 +149,25 @@ export class PerplexityParser extends ChatParser {
       "Perplexity Search";
     const title = rawTitle.trim().replace(/\s+/g, " ");
 
+    // 1. Attempt API-first extraction when in prefer_api mode
+    if (parserMode !== "prefer_dom") {
+      const slug = getThreadSlug(currentUrl);
+      if (slug) {
+        try {
+          const apiData = await this.fetchThread(slug);
+          if (apiData && (apiData.entries?.length || apiData.first_entry)) {
+            return formatApiResult(apiData, currentUrl, title);
+          }
+        } catch (err) {
+          console.warn(
+            "[AI Exporter] Perplexity API fetch failed, falling back to DOM:",
+            err,
+          );
+        }
+      }
+    }
+
+    // 2. DOM extraction fallback
     const messages = [];
 
     // Perplexity Container
@@ -60,6 +213,10 @@ export class PerplexityParser extends ChatParser {
       if (el.closest('[class*="related"], [class*="sources"]')) return;
 
       if (isUser(el)) {
+        if (el.parentElement?.closest(".group\\/user-bubble, .group\\/query")) {
+          return;
+        }
+
         // Extract timestamp if present in bubble
         const timeEl = el.querySelector(
           ".text-tertiary, [class*='text-tertiary']",
@@ -89,10 +246,6 @@ export class PerplexityParser extends ChatParser {
       }
     });
 
-    const currentUrl =
-      typeof window !== "undefined" && window.location
-        ? window.location.href || ""
-        : "";
     const metadata = {
       Source: "Perplexity",
       Date: new Date().toLocaleString(),
