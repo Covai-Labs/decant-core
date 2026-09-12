@@ -8,6 +8,7 @@ import {
   PerplexityParser,
   getThreadSlug,
   formatApiResult,
+  getPerplexityAccount,
 } from "../ai/perplexity.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -208,4 +209,72 @@ test("PerplexityParser backward compatibility with legacy .group/query selector"
     result.messages[1].content,
     "Quantum computing is a field of computer science.",
   );
+});
+
+test("getPerplexityAccount retrieves account ID from sessionStorage", async () => {
+  const dom = parseHTML("<html><body></body></html>");
+  globalThis.window = dom.window;
+  const storage = new Map();
+  globalThis.window.sessionStorage = {
+    getItem: (k) => storage.get(k) || null,
+    setItem: (k, v) => storage.set(k, v),
+  };
+  globalThis.window.localStorage = {
+    getItem: () => null,
+  };
+  storage.set("pplx-active-account", "b053465f-463f-48e5-8298-bfc0469fcae7");
+
+  const acc = await getPerplexityAccount();
+  assert.equal(acc, "b053465f-463f-48e5-8298-bfc0469fcae7");
+});
+
+test("getPerplexityAccount retrieves account ID from localStorage", async () => {
+  const dom = parseHTML("<html><body></body></html>");
+  globalThis.window = dom.window;
+  globalThis.window.sessionStorage = {
+    getItem: () => null,
+  };
+  const storage = new Map();
+  globalThis.window.localStorage = {
+    getItem: (k) => storage.get(k) || null,
+    setItem: (k, v) => storage.set(k, v),
+  };
+  storage.set(
+    "pplx-last-active-account",
+    "a1234567-89ab-cdef-0123-456789abcdef",
+  );
+
+  const acc = await getPerplexityAccount();
+  assert.equal(acc, "a1234567-89ab-cdef-0123-456789abcdef");
+});
+
+test("getPerplexityAccount falls back to linked-accounts API endpoint", async () => {
+  const dom = parseHTML("<html><body></body></html>");
+  globalThis.window = dom.window;
+  globalThis.window.sessionStorage = { getItem: () => null };
+  globalThis.window.localStorage = { getItem: () => null };
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (url.includes("/api/auth/linked-accounts")) {
+      return {
+        ok: true,
+        json: async () => ({
+          accounts: [
+            {
+              user_id: "c9876543-21ba-fedc-ba98-7654321fedcb",
+            },
+          ],
+        }),
+      };
+    }
+    return { ok: false };
+  };
+
+  try {
+    const acc = await getPerplexityAccount();
+    assert.equal(acc, "c9876543-21ba-fedc-ba98-7654321fedcb");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

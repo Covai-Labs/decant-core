@@ -112,6 +112,81 @@ export function formatApiResult(threadData, currentUrl, fallbackTitle) {
   return { title, messages, url: effectiveUrl, metadata };
 }
 
+export async function getPerplexityAccount() {
+  if (typeof window === "undefined") return null;
+
+  const isUuid = (str) =>
+    typeof str === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      str.trim(),
+    );
+
+  // 1. Check sessionStorage ('pplx-active-account')
+  try {
+    const sessionAcc = window.sessionStorage?.getItem("pplx-active-account");
+    if (sessionAcc && isUuid(sessionAcc)) return sessionAcc.trim();
+  } catch {
+    // Ignore storage errors
+  }
+
+  // 2. Check localStorage ('pplx-last-active-account')
+  try {
+    const localAcc = window.localStorage?.getItem("pplx-last-active-account");
+    if (localAcc && isUuid(localAcc)) return localAcc.trim();
+  } catch {
+    // Ignore storage errors
+  }
+
+  // 3. Scan keys in sessionStorage and localStorage for pplx account UUIDs
+  try {
+    for (const storage of [window.sessionStorage, window.localStorage]) {
+      if (!storage) continue;
+      for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i);
+        if (key && (key.includes("pplx") || key.includes("account"))) {
+          const val = storage.getItem(key);
+          if (val && isUuid(val)) return val.trim();
+        }
+      }
+    }
+  } catch {
+    // Ignore storage scanning errors
+  }
+
+  // 4. Check document.cookie if available
+  try {
+    const match = document.cookie?.match(
+      /(?:pplx-last-active-account|pplx-active-account)=([0-9a-f-]{36})/i,
+    );
+    if (match && isUuid(match[1])) return match[1].trim();
+  } catch {
+    // Ignore cookie errors
+  }
+
+  // 5. Fallback: query https://www.perplexity.ai/api/auth/linked-accounts using session cookies
+  try {
+    if (typeof fetch === "function") {
+      const res = await fetch(
+        "https://www.perplexity.ai/api/auth/linked-accounts",
+        {
+          method: "GET",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        },
+      );
+      if (res.ok) {
+        const data = await res.json();
+        const accountId = data?.accounts?.[0]?.user_id;
+        if (accountId && isUuid(accountId)) return accountId.trim();
+      }
+    }
+  } catch {
+    // Ignore linked-accounts network error
+  }
+
+  return null;
+}
+
 export class PerplexityParser extends ChatParser {
   name = "Perplexity";
   isAvailable(url) {
@@ -119,13 +194,21 @@ export class PerplexityParser extends ChatParser {
   }
 
   async fetchThread(slug) {
+    const accountId = await getPerplexityAccount();
     const url = `https://www.perplexity.ai/rest/thread/${slug}?with_parent_info=true&with_schematized_response=true&version=2.18&source=default&limit=100&offset=0&from_first=true`;
+    const headers = {
+      Accept: "application/json",
+      "x-app-apiclient": "default",
+      "x-app-apiversion": "2.18",
+    };
+    if (accountId) {
+      headers["x-pplx-account"] = accountId;
+    }
+
     const response = await fetch(url, {
       method: "GET",
       credentials: "include",
-      headers: {
-        Accept: "application/json",
-      },
+      headers,
     });
     if (!response.ok) {
       throw new Error(
