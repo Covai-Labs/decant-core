@@ -111,30 +111,13 @@ import { normalizeLatexMath } from "decant-core";
 
 ## Supported Platforms
 
-| Platform                            | Parser                    | Extraction strategy                        |
-| :---------------------------------- | :------------------------ | :----------------------------------------- |
-| **ChatGPT**                         | `ChatGPTParser`           | DOM + internal API                         |
-| **Claude**                          | `ClaudeParser`            | DOM + internal API + React fiber           |
-| **Google Gemini**                   | `GeminiParser`            | DOM + batchexecute RPC                     |
-| **Microsoft Copilot**               | `CopilotParser`           | DOM (multi-domain)                         |
-| **Perplexity**                      | `PerplexityParser`        | Internal API + DOM fallback                |
-| **DeepSeek**                        | `DeepSeekParser`          | DOM + internal API                         |
-| **Qwen**                            | `QwenParser`              | DOM                                        |
-| **Meta AI**                         | `MetaParser`              | DOM                                        |
-| **Mistral / Le Chat**               | `MistralParser`           | DOM                                        |
-| **Proton Lumo**                     | `LumoParser`              | DOM                                        |
-| **Z.ai**                            | `ZAiParser`               | DOM                                        |
-| **Google AI Studio**                | `GoogleAIStudioParser`    | DOM                                        |
-| **NotebookLM**                      | `NotebookLMParser`        | DOM                                        |
-| **Google Search AI (AI Overviews)** | `GoogleSearchAIParser`    | DOM                                        |
-| **Gemini Cloud Assist**             | `GeminiCloudAssistParser` | DOM                                        |
-| **Joyland**                         | `JoylandParser`           | DOM                                        |
-| **Chub**                            | `ChubParser`              | DOM                                        |
-| **Generic Web Article**             | `ArticleParser`           | Readability + Defuddle + Article-Extractor |
+17 AI chat platform parsers plus generic web article extraction:
 
-All parsers extend the base [`ChatParser`](ai/base.js) interface, so they share a consistent contract — `isAvailable(url)` and a normalized `parse()` result. `ArticleParser`'s `isAvailable(...)` returns true for any http(s) URL.
+**ChatGPT · Claude · Google Gemini · Microsoft Copilot · Perplexity · DeepSeek · Qwen · Meta AI · Mistral (Le Chat) · Proton Lumo · Z.ai · Google AI Studio · NotebookLM · Google Search AI · Gemini Cloud Assist · Joyland · Chub**
 
-> **A note on maintenance:** "DOM" here means the parser is resilient against layout changes (it targets semantic structure, not pixel positions). "Internal API" parsers read the same RPC payloads the frontend uses, which keeps working even when the CSS is redecorated. When a platform changes, one shared fix heals every exporter built on `decant-core`.
+All parsers extend the base [`ChatParser`](ai/base.js) interface — a consistent `isAvailable(url)` +
+normalized `parse()` contract. For the extraction-strategy breakdown and maintenance model, see
+[SUPPORTED_PLATFORMS.md](SUPPORTED_PLATFORMS.md).
 
 ---
 
@@ -157,11 +140,5 @@ These products are demonstrations of the library, not its purpose. Yours can be 
 
 ## Development
 
-```bash
-npm install
-npm run test       # node --test
-npm run lint       # ESLint
-npm run format:check   # Prettier
-```
-
-When an AI interface changes or you want to add a new platform, read [CONTRIBUTING.md](CONTRIBUTING.md) first — it covers the parser pattern, detection registration, and test fixtures.
+Building, testing, and extending the library is covered in [DEVELOPMENT.md](DEVELOPMENT.md);
+platform contributions follow the parser pattern and CLA in [CONTRIBUTING.md](CONTRIBUTING.md).
