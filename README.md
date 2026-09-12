@@ -52,10 +52,10 @@ The payoff is maintenance: **when a platform changes, the fix happens once, in o
 import { detectPlatform, isAiChatUrl } from "decant-core";
 
 if (isAiChatUrl(window.location.href)) {
-  const { platform, parser } = detectPlatform(window.location.href);
+  const match = detectPlatform(window.location.href);
 
-  if (parser && parser.isAvailable(window.location.href)) {
-    const result = await parser.parse();
+  if (match?.parser && match.parser.isAvailable(window.location.href)) {
+    const result = await match.parser.parse();
     // result.title
     // result.messages  -> [{ role: 'User' | 'Assistant', content, ... }]
     // result.model

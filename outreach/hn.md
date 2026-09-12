@@ -34,6 +34,7 @@ Licensed AGPL-3.0. That's deliberate: if the parsers are shared commons, a platf
 [receipts to paste when people ask "why github.com/xxx": see receipts.md]
 
 Questions I'd love feedback on:
+
 1. Would you depend on an AGPL parser library, and under what license does your own project ship?
 2. Which platform parser is most fragile for you right now — where did the last break happen?
 

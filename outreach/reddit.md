@@ -1,6 +1,6 @@
 # Subreddit outreach drafts
 
-Post text frames the *problem* (parser breakage), not the project. Link the repo; keep the AGPL
+Post text frames the _problem_ (parser breakage), not the project. Link the repo; keep the AGPL
 mention in the body as context, not a pitch.
 
 ## r/webdev

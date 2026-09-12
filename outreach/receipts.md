@@ -13,13 +13,13 @@ parsing breaking. Collect them before posting. Add real links; delete template r
 
 ## Evidence to gather
 
-| Platform | Break claim | Link | Impact |
-| --- | --- | --- | --- |
-| ChatGPT | — | — | — |
-| Claude | artifacts/widget re-render | — | — |
-| Gemini | thinking blocks / batchexecute shape | — | — |
-| DeepSeek | — | — | — |
-| Perplexity | — | — | — |
+| Platform   | Break claim                          | Link | Impact |
+| ---------- | ------------------------------------ | ---- | ------ |
+| ChatGPT    | —                                    | —    | —      |
+| Claude     | artifacts/widget re-render           | —    | —      |
+| Gemini     | thinking blocks / batchexecute shape | —    | —      |
+| DeepSeek   | —                                    | —    | —      |
+| Perplexity | —                                    | —    | —      |
 
 ## Data points that count as receipts
 

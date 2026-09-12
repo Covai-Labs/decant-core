@@ -10,8 +10,11 @@ interface Props {
 
 const { title, description, canonicalPath = '/', noindex = false } = Astro.props;
 
-const SITE = 'https://covai-labs.github.io/decant-core';
-const canonical = new URL(canonicalPath, `${SITE}/decant-core`).toString();
+const SITE = 'https://covai-labs.github.io';
+const canonical = new URL(
+  `/decant-core${canonicalPath.startsWith('/') ? '' : '/'}${canonicalPath}`,
+  SITE,
+).toString();
 ---
 
 <!doctype html>
